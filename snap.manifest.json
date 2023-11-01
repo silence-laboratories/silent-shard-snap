@@ -1,0 +1,38 @@
+{
+  "version": "1.1.20",
+  "description": "SilentShard Snap TSS(2,2)",
+  "proposedName": "SilentShard Snap TSS(2,2)",
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/com.silencelaboratories/silentshard-snap"
+  },
+  "source": {
+    "shasum": "lNFoBCpwEZXMFb/kR59YEBEDLhm/EyIIw2Nq/18kQMM=",
+    "location": {
+      "npm": {
+        "filePath": "dist/bundle.js",
+        "iconPath": "images/silentShardLogo.svg",
+        "packageName": "@silencelaboratories/silent-shard-snap",
+        "registry": "https://registry.npmjs.org/"
+      }
+    }
+  },
+  "initialPermissions": {
+    "endowment:keyring": {
+      "allowedOrigins": [
+        "https://snap.silencelaboratories.com"
+      ]
+    },
+    "snap_dialog": {},
+    "snap_notify": {},
+    "snap_manageState": {},
+    "endowment:network-access": {},
+    "endowment:rpc": {
+      "dapps": true,
+      "snaps": true
+    },
+    "snap_getEntropy": {},
+    "snap_manageAccounts": {}
+  },
+  "manifestVersion": "0.1"
+}
