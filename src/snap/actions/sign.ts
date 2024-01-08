@@ -4,7 +4,7 @@ import {
 	randBytes,
 } from '@silencelaboratories/ecdsa-tss';
 import * as utils from '../utils';
-import { sendMessage } from '../../firebaseEndpoints';
+import { sendMessage } from '../../firebaseApi';
 import { PairingData, SignConversation, SignMetadata } from '../../types';
 import _sodium, { base64_variants } from 'libsodium-wrappers';
 import { SnapError, SnapErrorCode } from '../../error';
@@ -30,7 +30,7 @@ export const sign = async (
 		if (running) {
 			throw new SnapError(
 				`Sign already running`,
-				SnapErrorCode.ResourceBusy,
+				SnapErrorCode.SignResourceBusy,
 			);
 		}
 		running = true;
@@ -143,6 +143,9 @@ export const sign = async (
 		};
 	} catch (error) {
 		if (error instanceof SnapError) {
+			if (error.code != SnapErrorCode.SignResourceBusy) {
+				running = false;
+			}
 			throw error;
 		} else if (error instanceof Error) {
 			throw new SnapError(error.message, SnapErrorCode.KeygenFailed);

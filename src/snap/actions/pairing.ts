@@ -3,7 +3,7 @@ import {
 	getTokenEndpoint,
 	refreshTokenEndpoint,
 	sendMessage,
-} from '../../firebaseEndpoints';
+} from '../../firebaseApi';
 import _sodium from 'libsodium-wrappers';
 import { DistributedKey, PairingData, StorageData, Wallet } from '../../types';
 import { SnapError, SnapErrorCode } from '../../error';
@@ -83,13 +83,17 @@ export const getToken = async () => {
 				);
 				usedBackupData = true;
 			} catch (error) {
-				await sendMessage(
-					data.token,
-					'pairing',
-					{ isPaired: false },
-					false,
-					pairingDataInit.pairingId,
-				);
+				try {
+					await sendMessage(
+						data.token,
+						'pairing',
+						{ isPaired: false },
+						false,
+						pairingDataInit.pairingId,
+					);
+				} catch (error) {
+					throw error;
+				}
 				if (error instanceof SnapError) {
 					throw error;
 				} else if (error instanceof Error) {

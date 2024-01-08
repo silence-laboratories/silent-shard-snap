@@ -1,13 +1,15 @@
 import { SnapError, SnapErrorCode } from '../error';
-import { Wallet } from '../types';
 import { JsonTx } from '@ethereumjs/tx';
 import type { Json } from '@metamask/utils';
 
 export const fromHexStringToBytes = (hexString: string) => {
 	try {
-		return Uint8Array.from(
-			hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)),
-		);
+		const matched = hexString.match(/.{1,2}/g);
+		if (matched) {
+			return Uint8Array.from(matched.map((byte) => parseInt(byte, 16)));
+		} else {
+			throw new Error(`invalid-hex-string`);
+		}
 	} catch (error) {
 		throw error instanceof Error
 			? error
@@ -34,11 +36,11 @@ export function checkOwnKeys(keys: string[], object: object) {
 	});
 }
 
-function randomInteger(min, max) {
+function randomInteger(min: number, max: number) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function random_string(n): string {
+export function random_string(n: number): string {
 	// A n length string taking characters from lower_case, upper_case and digits
 	var result = '';
 	var characters =

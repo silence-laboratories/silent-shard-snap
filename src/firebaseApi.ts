@@ -1,7 +1,6 @@
 import { SnapError, SnapErrorCode } from './error';
 
 const baseUrl = 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net';
-// const baseUrl = 'http://127.0.0.1:5001/mobile-wallet-mm-snap/us-central1';
 
 interface Response {
 	response: any;

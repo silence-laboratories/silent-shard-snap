@@ -1,5 +1,4 @@
 import { SnapError, SnapErrorCode } from '../error';
-import { toHexString } from './utils';
 import _sodium from 'libsodium-wrappers';
 
 export const requestEntropy = async (salt?: Uint8Array) => {

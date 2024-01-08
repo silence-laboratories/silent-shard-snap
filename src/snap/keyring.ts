@@ -39,13 +39,8 @@ import {
 } from '@metamask/eth-sig-util';
 import { SnapError, SnapErrorCode } from '../error';
 import { RLP } from '@ethereumjs/rlp';
-
-enum TransactionType {
-	Legacy = 0,
-	AccessListEIP2930 = 1,
-	FeeMarketEIP1559 = 2,
-	BlobEIP4844 = 3,
-}
+import { InvalidRequestError } from '@metamask/snaps-sdk';
+import type { SnapsGlobalObject } from '@metamask/snaps-rpc-methods';
 
 export class SimpleKeyring implements Keyring {
 	#wallets: Record<string, Wallet>;
@@ -120,12 +115,12 @@ export class SimpleKeyring implements Keyring {
 			} else if (errorWithType.message.includes('already pending')) {
 				throw new SnapError(
 					'Request is already running',
-					SnapErrorCode.AccountNotCreation,
+					SnapErrorCode.AccountNotCreated,
 				);
 			} else {
 				throw new SnapError(
 					'User rejected request for account creation',
-					SnapErrorCode.AccountNotCreation,
+					SnapErrorCode.AccountNotCreated,
 				);
 			}
 		}
@@ -183,15 +178,28 @@ export class SimpleKeyring implements Keyring {
 	async submitRequest(
 		request: KeyringRequest,
 	): Promise<SubmitRequestResponse> {
-		const { method, params } = request.request as JsonRpcRequest;
-		if (params == null) {
-			throw new SnapError('Invalid params', SnapErrorCode.UnknownError);
+		try {
+			const { method, params } = request.request as JsonRpcRequest;
+			if (params == null) {
+				throw new SnapError(
+					'Invalid params',
+					SnapErrorCode.UnknownError,
+				);
+			}
+			const signature = await this.#handleSigningRequest(method, params);
+			return {
+				pending: false,
+				result: signature,
+			};
+		} catch (error) {
+			const errorMessage = (
+				JSON.parse((error as SnapError).message) as {
+					message: string;
+					code: SnapErrorCode;
+				}
+			).message;
+			throw new InvalidRequestError(errorMessage);
 		}
-		const signature = await this.#handleSigningRequest(method, params);
-		return {
-			pending: false,
-			result: signature,
-		};
 	}
 
 	async approveRequest(_id: string): Promise<void> {
@@ -213,7 +221,10 @@ export class SimpleKeyring implements Keyring {
 		);
 
 		if (walletMatch === undefined) {
-			throw new Error(`Cannot find wallet for address: ${address}`);
+			throw new SnapError(
+				`Cannot find wallet for address: ${address}`,
+				SnapErrorCode.CannotFindWallet,
+			);
 		}
 		return walletMatch;
 	}
@@ -363,15 +374,7 @@ export class SimpleKeyring implements Keyring {
 			hashPersonalMessage(Buffer.from(request.slice(2), 'hex')),
 		);
 		const wallet = this.#getWalletByAddress(from);
-		// console.log(
-		// 	'signPersonalMessage',
-		// 	'keccak256',
-		// 	request,
-		// 	messageHash,
-		// 	'personal_sign',
-		// 	wallet.distributedKey.accountId,
-		// 	wallet.distributedKey.keyShareData,
-		// );
+
 		const { signature, recId } = await runSign(
 			'keccak256',
 			request,
@@ -380,7 +383,6 @@ export class SimpleKeyring implements Keyring {
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
 		);
-		// console.log('Signature', '0x' + signature + (recId + 27).toString(16));
 
 		return '0x' + signature + (recId + 27).toString(16);
 	}
@@ -412,6 +414,6 @@ export class SimpleKeyring implements Keyring {
 		event: KeyringEvent,
 		data: Record<string, Json>,
 	): Promise<void> {
-		await emitSnapKeyringEvent(snap, event, data);
+		await emitSnapKeyringEvent(snap as SnapsGlobalObject, event, data);
 	}
 }

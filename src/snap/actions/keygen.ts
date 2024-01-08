@@ -5,7 +5,7 @@ import {
 } from '@silencelaboratories/ecdsa-tss';
 import * as utils from '../utils';
 import { KeygenConversation, PairingData } from '../../types';
-import { sendMessage } from '../../firebaseEndpoints';
+import { sendMessage } from '../../firebaseApi';
 import _sodium, { base64_variants } from 'libsodium-wrappers';
 import { SnapError, SnapErrorCode } from '../../error';
 
@@ -26,7 +26,7 @@ export const keygen = async (
 		if (running) {
 			throw new SnapError(
 				`Keygen already running`,
-				SnapErrorCode.ResourceBusy,
+				SnapErrorCode.KeygenResourceBusy,
 			);
 		}
 		running = true;
@@ -136,6 +136,9 @@ export const keygen = async (
 		};
 	} catch (error) {
 		if (error instanceof SnapError) {
+			if (error.code != SnapErrorCode.KeygenResourceBusy) {
+				running = false;
+			}
 			throw error;
 		} else if (error instanceof Error) {
 			throw new SnapError(error.message, SnapErrorCode.KeygenFailed);

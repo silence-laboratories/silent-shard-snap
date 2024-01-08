@@ -1,13 +1,13 @@
 {
-  "version": "1.1.20",
-  "description": "SilentShard Snap TSS(2,2)",
-  "proposedName": "SilentShard Snap TSS(2,2)",
+  "version": "1.2.0",
+  "description": "Silent Shard",
+  "proposedName": "Silent Shard",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/com.silencelaboratories/silentshard-snap"
+    "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
   },
   "source": {
-    "shasum": "lNFoBCpwEZXMFb/kR59YEBEDLhm/EyIIw2Nq/18kQMM=",
+    "shasum": "QNooMQ1IkQAV9w6L/wCdUySlLJcCrMsbGgnI7FJCpzs=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
@@ -20,7 +20,8 @@
   "initialPermissions": {
     "endowment:keyring": {
       "allowedOrigins": [
-        "https://snap.silencelaboratories.com"
+        "https://snap.silencelaboratories.com",
+        "https://snap-staging.silencelaboratories.com"
       ]
     },
     "snap_dialog": {},

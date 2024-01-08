@@ -105,4 +105,19 @@ export const PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssUnPair,
 		],
 	],
+	[
+		'https://snap-staging.silencelaboratories.com',
+		[
+			SnapKeyringMethod.ListAccounts,
+			SnapKeyringMethod.CreateAccount,
+			SnapKeyringMethod.GetAccount,
+			SnapKeyringMethod.DeleteAccount,
+			InternalMethod.TssInitPairing,
+			InternalMethod.TssIsPaired,
+			InternalMethod.TssRunPairing,
+			InternalMethod.TssRunKeygen,
+			InternalMethod.TssSnapVersion,
+			InternalMethod.TssUnPair,
+		],
+	],
 ]);

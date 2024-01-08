@@ -1,7 +1,6 @@
 import { SnapError, SnapErrorCode } from '../../error';
-import { sendMessage } from '../../firebaseEndpoints';
-import { BackupConversation, DistributedKey, PairingData } from '../../types';
-import { encMessage } from '../entropy';
+import { sendMessage } from '../../firebaseApi';
+import { BackupConversation, PairingData } from '../../types';
 
 export const backup = async (
 	pairingData: PairingData,

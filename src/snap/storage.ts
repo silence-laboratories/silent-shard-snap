@@ -42,7 +42,7 @@ const saveSilentShareStorage = async (data: StorageData) => {
 		if (data == null) {
 			throw new SnapError(
 				'Storage data cannot be null',
-				SnapErrorCode.InvalidData,
+				SnapErrorCode.InvalidStorageData,
 			);
 		}
 

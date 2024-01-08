@@ -9,19 +9,18 @@ import { panel, text, heading, divider } from '@metamask/snaps-ui';
 import { SnapError, SnapErrorCode } from './error';
 import { handleKeyringRequest } from '@metamask/keyring-api';
 import { SimpleKeyring } from './snap/keyring';
-import { snapVersion } from './firebaseEndpoints';
+import { snapVersion } from './firebaseApi';
 import { PERMISSIONS } from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
 import { StorageData } from './types';
 window.Buffer = window.Buffer || Buffer;
 
 let keyring: SimpleKeyring;
-const SNAP_VERSION = '1.1.19';
+const SNAP_VERSION = '1.2.0';
 
 const showConfirmationMessage = async (
 	prompt: string,
-	description: string,
-	textAreaContent: string,
+	description: string[],
 ) => {
 	return await snap.request({
 		method: 'snap_dialog',
@@ -30,8 +29,7 @@ const showConfirmationMessage = async (
 			content: panel([
 				heading(prompt),
 				divider(),
-				text(description),
-				text(textAreaContent),
+				...description.map((t) => text(t)),
 			]),
 		},
 	});
@@ -63,17 +61,32 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		case 'tss_unpair':
 			await deleteStorage();
 			return;
+
+		/**
+		 * tss_initPairing
+		 * @abstract This function initialise the pairing and return the qr code data
+		 *
+		 * @returns
+		 * qrCode: String contains qr code data
+		 *
+		 * @throws
+		 * 1. RejectedPairingRequest, when user rejected the pairing request
+		 * 2. UnknownError, when something unknown error occurs
+		 */
 		case 'tss_initPairing':
 			let initPairingRequest = await showConfirmationMessage(
-				`Hello, ${origin}!`,
-				'Pairing with a new mobile application?',
-				'Create a new pair between Metamask Plugin and SilentShard mobile application',
+				`Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`,
+				[
+					'👉🏻 To get started, grab the companion app from either the Apple App Store or Google Play.',
+					`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
+					`Happy to have you onboard! 🥳`,
+				],
 			);
 
 			if (!initPairingRequest) {
 				throw new SnapError(
-					'User Rejected Request for Pairing',
-					SnapErrorCode.RejectedRequest,
+					'Pairing is rejected.',
+					SnapErrorCode.RejectedPairingRequest,
 				);
 			}
 			const qrCodeMessage = await sdk.initPairing();
@@ -81,10 +94,26 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 				qrCode: qrCodeMessage,
 			};
 
+		/**
+		 * tss_runPairing
+		 * @abstract This start pairing process with phone and fetch the auth token
+		 *
+		 * @returns
+		 * address, if found backup data then return String otherwise null
+		 * deviceName, the name of device it is paired
+		 *
+		 * @throws
+		 * 1. PairingNotInitialized, when runPairing is called before the initPairing
+		 * 2. InvalidBackupData, when snap get invalid backup data,
+		 * 3. StorageError, when snap fails to store data in MM snap state,
+		 * 4. FirebaseError, when error occurs on server side, message will contains info,
+		 * 5. UnknownError, when something unknown error occurs
+		 */
 		case 'tss_runPairing':
 			const pairingRes = await sdk.runPairing();
 			if (pairingRes.usedBackupData && pairingRes.tempDistributedKey) {
 				return {
+					deviceName: pairingRes.deviceName,
 					address:
 						'0x' +
 						pubToAddress(
@@ -95,8 +124,26 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 						).toString('hex'), // pairingRes.temp_distributed_key.account_id,
 				};
 			}
-			return { address: null };
+			return { address: null, deviceName: pairingRes.deviceName };
 
+		/**
+		 * tss_runKeygen
+		 * @abstract This start keygen process between phone and snap, and will create key pairs.
+		 * Checks if runPairing has backup data, if backup data is used then will return same address without initiating the keygen process.
+		 *
+		 * @returns
+		 * address, String of address
+		 *
+		 * @throws
+		 * 1. NotPaired, if snap is not paired yet.
+		 * 2. FirebaseError, when error occurs on server side, message will contains info,
+		 * 3. StorageError, when snap fails to store data in MM snap state,
+		 * 4. UnknownError, when something unknown error occurs
+		 * 5. InternalLibError, when internal error in library
+		 * 6. KeygenResourceBusy, when keygen is already running
+		 * 7. UserPhoneDenied, when user deined from other device,
+		 * 8. KeygenFailed, when keygen failed due to some other reason
+		 */
 		case 'tss_runKeygen':
 			let silentShareStorage: StorageData = await getSilentShareStorage();
 			if (silentShareStorage.tempDistributedKey) {
@@ -125,9 +172,15 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 				};
 			}
 
-		case 'tss_runRefresh':
-			return await sdk.refreshPairing();
-
+		/**
+		 * tss_snapVersion
+		 * @abstract get the latest snap version and the version installed
+		 *
+		 * @returns
+		 * currentVersion: current version of the snap installed,
+		 * latestVersion: latest version of the snap available,
+		 *
+		 */
 		case 'tss_snapVersion':
 			const snapLatestVersion = await snapVersion();
 

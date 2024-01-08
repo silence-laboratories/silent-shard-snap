@@ -11,14 +11,9 @@ import { SnapError, SnapErrorCode } from '../error';
 import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
 import { v4 as uuid } from 'uuid';
 
+const TOKEN_LIFE_TIME = 60000;
+
 async function isPaired() {
-	// let cond = await isStorageExist();
-	// if (!cond) {
-	// 	return {
-	// 		isPaired: false,
-	// 		deviceName: null,
-	// 	};
-	// }
 	try {
 		let silentShareStorage = await getSilentShareStorage();
 		const deviceName = silentShareStorage.pairingData.deviceName;
@@ -71,7 +66,7 @@ async function runKeygen() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
 	let pairingData = silentShareStorage.pairingData;
 	// Refresh token if it is expired
-	if (pairingData.tokenExpiration < Date.now() - 60000) {
+	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
 		pairingData = await refreshPairing();
 	}
 	let wallets = silentShareStorage.wallets;
@@ -102,7 +97,11 @@ async function runBackup() {
 	const encryptedMessage = await encMessage(
 		JSON.stringify(silentShareStorage.tempDistributedKey),
 	);
-	await Backup.backup(silentShareStorage.pairingData, encryptedMessage);
+	let pairingData = silentShareStorage.pairingData;
+	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
+		pairingData = await refreshPairing();
+	}
+	await Backup.backup(pairingData, encryptedMessage);
 }
 
 async function runSign(
@@ -121,7 +120,7 @@ async function runSign(
 	}
 	let silentShareStorage = await getSilentShareStorage();
 	let pairingData = silentShareStorage.pairingData;
-	if (pairingData.tokenExpiration < Date.now() - 60000) {
+	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
 		pairingData = await refreshPairing();
 	}
 	let messageHash = fromHexStringToBytes(messageHashHex);
