@@ -1,18 +1,18 @@
 {
-  "compilerOptions": {
-    "composite": true,
-    "declaration": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "CommonJS",
-    "moduleResolution": "node",
-    "useUnknownInCatchVariables": false,
-    "sourceMap": true,
-    // "strict": true,
-    "target": "ES2017",
-    "typeRoots": ["./node_modules/@types"]
-  },
-  "files": ["./node_modules/@metamask/snaps-types/dist/global.d.ts"],
-  "include": ["src", "./webpack.config.ts"]
+	"compilerOptions": {
+		"skipLibCheck": true,
+		"resolveJsonModule": true,
+		"esModuleInterop": true,
+		"exactOptionalPropertyTypes": true,
+		"forceConsistentCasingInFileNames": true,
+		"lib": ["ES2020", "DOM"],
+		"module": "CommonJS",
+		"moduleResolution": "node",
+		"noEmit": true,
+		"noErrorTruncation": true,
+		"noUncheckedIndexedAccess": true,
+		"strict": true,
+		"target": "es2020"
+	},
+	"include": ["src/", "snap.config.ts"]
 }

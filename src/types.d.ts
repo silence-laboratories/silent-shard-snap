@@ -1,58 +1,85 @@
-import { IP1KeyShare } from '@com.silencelaboratories/ecdsa-tss';
+import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
+import { KeyringAccount, KeyringRequest } from '@metamask/keyring-api';
 
-interface Message {
-	party: number;
-	round: number;
+export interface Message {
 	message?: string;
 	nonce?: string;
+	round: number;
+	party: number;
 }
 
-interface ConversationKeygen {
-	account_id: number;
-	created_at: number;
+export interface KeygenConversation {
+	createdAt: number;
 	expiry: number;
-	is_approved?: boolean;
+	isApproved: boolean | null;
+	accountId: number;
+	sessionId: string;
 	message: Message;
-	session_id: string;
-	backup_data?: string;
 }
 
-interface ConversationSign {
-	sign_metadata: 'eth_transaction' | 'eth_sign';
-	account_id: number;
-	created_at: number;
+export type SignMetadata =
+	| 'legacy_transaction'
+	| 'eth_transaction'
+	| 'eth_sign'
+	| 'personal_sign'
+	| 'eth_signTypedData'
+	| 'eth_signTypedData_v1'
+	| 'eth_signTypedData_v2'
+	| 'eth_signTypedData_v3'
+	| 'eth_signTypedData_v4';
+
+export interface SignConversation {
+	createdAt: number;
 	expiry: number;
-	is_approved?: boolean;
+	isApproved: boolean | null;
+	accountId: number;
+	hashAlg: string;
+	signMessage: string;
+	messageHash: string;
+	signMetadata: SignMetadata;
+	publicKey: string;
+	sessionId: string;
 	message: Message;
-	session_id: string;
-	public_key: string;
-	hash_alg: string;
-	sign_message: string;
 }
 
-type Conversation = ConversationKeygen | ConversationSign |  {is_pairied: boolean};
+export interface BackupConversation {
+	createdAt: number;
+	expiry: number;
+	backupData: string;
+	isBackedUp: boolean | null;
+	pairingId: string;
+}
 
 export interface PairingData {
-	pairing_id: string;
-	web_enc_public_key: string;
-	web_enc_private_key: string;
-	web_sign_public_key: string;
-	web_sign_private_key: string;
+	pairingId: string;
+	webEncPublicKey: string;
+	webEncPrivateKey: string;
+	webSignPublicKey: string;
+	webSignPrivateKey: string;
 	token: string;
-	token_expiration: number;
-	app_public_key: string;
-	device_name: string;
+	tokenExpiration: number;
+	appPublicKey: string;
+	deviceName: string;
 }
 
 export interface DistributedKey {
-	account_id: number;
-	public_key: string;
-	key_share_data: IP1KeyShare;
+	accountId: number;
+	publicKey: string;
+	keyShareData: IP1KeyShare;
 }
 
-export interface StorageData {
-	pairing_data: PairingData;
-	distributed_keys: DistributedKey[];
-}
+export type Wallet = {
+	account: KeyringAccount;
+	distributedKey: DistributedKey;
+};
 
-export { Conversation, ConversationKeygen, ConversationSign };
+export type KeyringState = {
+	wallets: Record<string, Wallet>;
+	requests: Record<string, KeyringRequest>;
+};
+
+export type StorageData = KeyringState & {
+	pairingData: PairingData;
+	accountId: string | null;
+	tempDistributedKey: DistributedKey | null;
+};

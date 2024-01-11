@@ -1,18 +1,27 @@
-import { OnRpcRequestHandler } from '@metamask/snaps-types';
+import {
+	OnKeyringRequestHandler,
+	OnRpcRequestHandler,
+} from '@metamask/snaps-types';
 import * as sdk from './snap/sdk';
-import { isStorageExist } from './snap/storage';
+import { deleteStorage, getSilentShareStorage } from './snap/storage';
 import { isPaired } from './snap/sdk';
 import { panel, text, heading, divider } from '@metamask/snaps-ui';
-import { sign } from 'crypto';
 import { SnapError, SnapErrorCode } from './error';
-import { NestedUint8Array, RLP } from '@ethereumjs/rlp';
-import { toHexString } from './snap/utils';
+import { handleKeyringRequest } from '@metamask/keyring-api';
+import { SimpleKeyring } from './snap/keyring';
+import { snapVersion } from './firebaseApi';
+import { PERMISSIONS } from './permissions';
+import { pubToAddress } from '@ethereumjs/util';
+import { StorageData } from './types';
+window.Buffer = window.Buffer || Buffer;
 
-async function showConfirmationMessage(
+let keyring: SimpleKeyring;
+const SNAP_VERSION = '1.2.0';
+
+const showConfirmationMessage = async (
 	prompt: string,
-	description: string,
-	textAreaContent: string,
-) {
+	description: string[],
+) => {
 	return await snap.request({
 		method: 'snap_dialog',
 		params: {
@@ -20,380 +29,199 @@ async function showConfirmationMessage(
 			content: panel([
 				heading(prompt),
 				divider(),
-				text(description),
-				text(textAreaContent),
+				...description.map((t) => text(t)),
 			]),
 		},
 	});
-}
+};
 
-async function showTxnConfirmationMessage(
-	prompt: string,
-	description: string,
-	textAreaContent: string[],
-) {
-	return await snap.request({
-		method: 'snap_dialog',
-		params: {
-			type: 'confirmation',
-			content: panel([
-				heading(prompt),
-				divider(),
-				text(description),
-				...textAreaContent.map((txt) => text(txt)),
-				divider(),
-			]),
-		},
-	});
-}
-
-async function checkIfPaired() {
-	let cond = await isStorageExist();
-	if (!cond) {
-		throw new SnapError('Not paired yet', SnapErrorCode.NotPaired);
-	}
-}
+const hasPermission = (origin: string, method: string): boolean => {
+	return Boolean(PERMISSIONS.get(origin)?.includes(method));
+};
 
 export const onRpcRequest: OnRpcRequestHandler = async ({
 	origin,
 	request,
 }) => {
-	let public_key, hash_alg, message, message_hash;
+	console.log(
+		`[Snap] custom method request (id=${
+			request.id ?? 'null'
+		}, origin=${origin}):`,
+		request,
+	);
+	if (!hasPermission(origin, request.method)) {
+		throw new Error(
+			`Origin '${origin}' is not allowed to call '${request.method}'`,
+		);
+	}
 	switch (request.method) {
 		case 'tss_isPaired':
 			return await isPaired();
 
 		case 'tss_unpair':
-			await checkIfPaired();
-			let unpairRequest = await showConfirmationMessage(
-				`Hello, ${origin}!`,
-				'Unpair mobile app?',
-				'Unpair mobile app?',
-			);
-			if (!unpairRequest) {
-				throw new SnapError(
-					'User Rejected Request for Unpairing',
-					SnapErrorCode.RejectedRequest,
-				);
-			}
-			await sdk.unpair();
+			await deleteStorage();
 			return;
 
-		case 'tss_getAccounts':
-			await checkIfPaired();
-			const accounts = await sdk.getAccountsInfo();
-			return {
-				accounts: accounts,
-			};
-
+		/**
+		 * tss_initPairing
+		 * @abstract This function initialise the pairing and return the qr code data
+		 *
+		 * @returns
+		 * qrCode: String contains qr code data
+		 *
+		 * @throws
+		 * 1. RejectedPairingRequest, when user rejected the pairing request
+		 * 2. UnknownError, when something unknown error occurs
+		 */
 		case 'tss_initPairing':
-			let storageExist = await isStorageExist();
-			if (storageExist) {
-				throw new SnapError(
-					'Already paired',
-					SnapErrorCode.AlreadyPaired,
-				);
-			}
 			let initPairingRequest = await showConfirmationMessage(
-				`Hello, ${origin}!`,
-				'Pairing with a new mobile application?',
-				'Create a new pair between Metamask Plugin and SilentShard mobile application',
+				`Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`,
+				[
+					'👉🏻 To get started, grab the companion app from either the Apple App Store or Google Play.',
+					`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
+					`Happy to have you onboard! 🥳`,
+				],
 			);
 
 			if (!initPairingRequest) {
 				throw new SnapError(
-					'User Rejected Request for Pairing',
-					SnapErrorCode.RejectedRequest,
+					'Pairing is rejected.',
+					SnapErrorCode.RejectedPairingRequest,
 				);
 			}
 			const qrCodeMessage = await sdk.initPairing();
 			return {
-				qr_code: qrCodeMessage,
+				qrCode: qrCodeMessage,
 			};
 
+		/**
+		 * tss_runPairing
+		 * @abstract This start pairing process with phone and fetch the auth token
+		 *
+		 * @returns
+		 * address, if found backup data then return String otherwise null
+		 * deviceName, the name of device it is paired
+		 *
+		 * @throws
+		 * 1. PairingNotInitialized, when runPairing is called before the initPairing
+		 * 2. InvalidBackupData, when snap get invalid backup data,
+		 * 3. StorageError, when snap fails to store data in MM snap state,
+		 * 4. FirebaseError, when error occurs on server side, message will contains info,
+		 * 5. UnknownError, when something unknown error occurs
+		 */
 		case 'tss_runPairing':
-			return await sdk.runPairing();
-
-		case 'tss_runRefresh':
-			return await sdk.refreshPairing();
-
-		// case 'tss_backup':
-		// 	return await sdk.runBackup();
-
-		case 'tss_runDKG': {
-			await checkIfPaired();
-			let dkgRequest = await showConfirmationMessage(
-				`Hello, ${origin}!`,
-				'Create a new Distributed Key?',
-				'Create a new Distributed Key between Metamask Plugin and SilentShard mobile application',
-			);
-
-			if (!dkgRequest) {
-				throw new SnapError(
-					'User Rejected Request for Keygen',
-					SnapErrorCode.RejectedRequest,
-				);
+			const pairingRes = await sdk.runPairing();
+			if (pairingRes.usedBackupData && pairingRes.tempDistributedKey) {
+				return {
+					deviceName: pairingRes.deviceName,
+					address:
+						'0x' +
+						pubToAddress(
+							Buffer.from(
+								pairingRes.tempDistributedKey.publicKey,
+								'hex',
+							),
+						).toString('hex'), // pairingRes.temp_distributed_key.account_id,
+				};
 			}
-			let dkgResponse = await sdk.runKeygen();
-			await sdk.runBackup();
-			return { dkgResponse };
-		}
+			return { address: null, deviceName: pairingRes.deviceName };
 
-		case 'tss_runPairingAndDKG': {
-			let pairingResponse = await sdk.runPairing();
-			await checkIfPaired();
-			if (pairingResponse.used_backup_data) {
-				const accounts = await sdk.getAccountsInfo();
-				if (accounts.length > 0) {
-					return {
-						pairingResponse,
-						dkgResponse: {
-							public_key: accounts[0],
-						},
-					};
-				} else {
-					return { pairingResponse };
-				}
+		/**
+		 * tss_runKeygen
+		 * @abstract This start keygen process between phone and snap, and will create key pairs.
+		 * Checks if runPairing has backup data, if backup data is used then will return same address without initiating the keygen process.
+		 *
+		 * @returns
+		 * address, String of address
+		 *
+		 * @throws
+		 * 1. NotPaired, if snap is not paired yet.
+		 * 2. FirebaseError, when error occurs on server side, message will contains info,
+		 * 3. StorageError, when snap fails to store data in MM snap state,
+		 * 4. UnknownError, when something unknown error occurs
+		 * 5. InternalLibError, when internal error in library
+		 * 6. KeygenResourceBusy, when keygen is already running
+		 * 7. UserPhoneDenied, when user deined from other device,
+		 * 8. KeygenFailed, when keygen failed due to some other reason
+		 */
+		case 'tss_runKeygen':
+			let silentShareStorage: StorageData = await getSilentShareStorage();
+			if (silentShareStorage.tempDistributedKey) {
+				return {
+					address:
+						'0x' +
+						pubToAddress(
+							Buffer.from(
+								silentShareStorage.tempDistributedKey.publicKey,
+								'hex',
+							),
+						).toString('hex'),
+				};
 			} else {
-				let dkgResponse = await sdk.runKeygen();
+				const keygenRes = await sdk.runKeygen();
 				await sdk.runBackup();
-				return { pairingResponse, dkgResponse };
+				return {
+					address:
+						'0x' +
+						pubToAddress(
+							Buffer.from(
+								keygenRes.distributedKey.publicKey,
+								'hex',
+							),
+						).toString('hex'),
+				};
 			}
-		}
 
-		case 'tss_sendSignRequest':
-			const {
-				public_key,
-				hash_alg,
-				message,
-				message_hash,
-				sign_metadata,
-			} = request.params as unknown as {
-				public_key: string;
-				hash_alg: string;
-				message: string;
-				message_hash: string;
-				sign_metadata: 'eth_transaction' | 'eth_sign';
+		/**
+		 * tss_snapVersion
+		 * @abstract get the latest snap version and the version installed
+		 *
+		 * @returns
+		 * currentVersion: current version of the snap installed,
+		 * latestVersion: latest version of the snap available,
+		 *
+		 */
+		case 'tss_snapVersion':
+			const snapLatestVersion = await snapVersion();
+
+			return {
+				currentVersion: SNAP_VERSION,
+				latestVersion: snapLatestVersion,
 			};
-
-			let signRequest: string | boolean;
-			await checkIfPaired();
-			if (sign_metadata === 'eth_transaction') {
-				let txn = parseTransaction(message);
-
-				const txnContent = stringContextForTxn(txn);
-
-				signRequest = await showTxnConfirmationMessage(
-					'Confirm Transaction',
-					'Please confirm the transaction details below:',
-					txnContent,
-				)!;
-			} else {
-				// TODO: Show address instead of public key
-				signRequest = await showConfirmationMessage(
-					`Hello, ${origin}!`,
-					'Sign a message?',
-					'Public key:\n' +
-						public_key +
-						'\n\nHash alg:\n' +
-						hash_alg +
-						'\n\nMessage:\n' +
-						Buffer.from(message, 'hex').toString('utf8'),
-				);
-			}
-
-			if (!signRequest) {
-				throw new SnapError(
-					'User Rejected Request for Sign',
-					SnapErrorCode.RejectedRequest,
-				);
-			}
-			return await sdk.runSign(
-				public_key,
-				hash_alg,
-				message,
-				message_hash,
-				sign_metadata,
-			);
-
-		// For testing purposes
-		// Do not uncomment this in production
-		// case 'tss_entropy':
-		// 	const entropy = await snap.request({
-		// 		method: 'snap_getEntropy',
-		// 		params: {
-		// 			version: 1,
-		// 			salt: `salt`,
-		// 		},
-		// 	});
-
-		// 	return entropy;
 
 		default:
 			throw new SnapError('Unknown method', SnapErrorCode.UnknownMethod);
 	}
 };
 
-function parseTransaction(rlpString: string) {
-	const rlpNoPrefix = rlpString.startsWith('0x')
-		? rlpString.slice(2)
-		: rlpString;
-	// For now we only support legacy and 1559 transactions
-	let txnType: 0 | 2;
-
-	const prefix = parseInt(rlpNoPrefix.slice(0, 2), 16);
-	switch (prefix) {
-		case 2: {
-			txnType = 2;
-			break;
-		}
-
-		default: {
-			// Legacy transactions first byte is always >= 0xc0
-			if (prefix >= 192) {
-				txnType = 0;
-				break;
-			} else if (prefix <= 127) {
-				// EIP-2718 transactions first byte is always <= 0x7f
-				throw new SnapError(
-					'Transaction type not supported yet',
-					SnapErrorCode.UnknownTxnType,
-				);
-			} else {
-				// Unknown transaction type
-				throw new SnapError(
-					'Invalid transaction type',
-					SnapErrorCode.UnknownTxnType,
-				);
+const getKeyring = async (): Promise<SimpleKeyring> => {
+	if (!keyring) {
+		if (!keyring) {
+			try {
+				const keyringState = await getSilentShareStorage();
+				keyring = new SimpleKeyring(keyringState);
+			} catch {
+				keyring = new SimpleKeyring({ wallets: {}, requests: {} });
 			}
 		}
 	}
-
-	if (txnType === 0) {
-		const bytes = Buffer.from(rlpNoPrefix, 'hex');
-		let elems = RLP.decode(bytes) as Uint8Array[];
-		elems = elems.map((elem) =>
-			elem.length > 0 ? elem : new Uint8Array([0]),
-		);
-		const nonce = parseInt(toHexString(elems[0]), 16);
-		const gasPrice = parseInt(toHexString(elems[1]), 16);
-		const gasLimit = parseInt(toHexString(elems[2]), 16);
-		const to = toHexString(elems[3]);
-		const value = BigInt(toHexString(elems[4]));
-		const data = toHexString(elems[5]);
-		const v = parseInt(toHexString(elems[6]), 16);
-		const txn: LegacyTxn = {
-			nonce,
-			gasPrice,
-			gasLimit,
-			to,
-			value,
-			data,
-			v,
-			type: 0,
-		};
-
-		return txn;
-	} else if (txnType === 2) {
-		const bytes = Buffer.from(rlpNoPrefix.slice(2), 'hex');
-		let elems = RLP.decode(bytes) as Uint8Array[];
-		// rlp([chain_id, nonce, max_priority_fee_per_gas, max_fee_per_gas, gas_limit, destination,
-		//amount, data, access_list, signature_y_parity, signature_r, signature_s])
-		elems = elems.map((elem) =>
-			elem.length > 0 ? elem : new Uint8Array([0]),
-		);
-		const chainId = parseInt(toHexString(elems[0]), 16);
-		const nonce = parseInt(toHexString(elems[1]), 16);
-		const maxPriorityFeePerGas = parseInt(toHexString(elems[2]), 16);
-		const maxFeePerGas = parseInt(toHexString(elems[3]), 16);
-		const gasLimit = parseInt(toHexString(elems[4]), 16);
-		const to = toHexString(elems[5]);
-		const value = BigInt('0x' + toHexString(elems[6]));
-		const data = toHexString(elems[7]);
-
-		const txn: Eip1559Txn = {
-			chainId,
-			nonce,
-			maxPriorityFeePerGas,
-			maxFeePerGas,
-			gasLimit,
-			to,
-			value,
-			data,
-			type: 2,
-		};
-
-		return txn;
-	} else {
-		// Unreachable error
-		throw new SnapError(
-			'Unknown transaction type (should be unreachable)',
-			SnapErrorCode.UnknownTxnType,
-		);
-	}
-}
-
-function stringContextForTxn(txn: LegacyTxn | Eip1559Txn) {
-	switch (txn.type) {
-		case 0: {
-			const tx = txn as LegacyTxn;
-			const valueEther = formatUnits(tx.value, 18);
-			const rawString = `To: 0x${tx.to}, Amount: Ξ${valueEther}, Data: 0x${tx.data}, Gas Price: ${tx.gasPrice} wei, Gas limit: ${tx.gasLimit}`;
-			return rawString.split(',');
-		}
-		case 2: {
-			const tx = txn as Eip1559Txn;
-			const valueEther = formatUnits(tx.value, 18);
-			const rawString = `Destination: 0x${tx.to}, Amount: Ξ${valueEther}, Data: 0x${tx.data}, ChainId: ${tx.chainId}, Max fee per gas: ${tx.maxFeePerGas} wei, Max priority fee per gas: ${tx.maxPriorityFeePerGas} wei, Gas limit: ${tx.gasLimit}`;
-			return rawString.split(',');
-		}
-
-		default:
-			// Unreachable error
-			throw new SnapError(
-				'Unknown transaction type',
-				SnapErrorCode.UnknownTxnType,
-			);
-	}
-}
-
-type LegacyTxn = {
-	nonce: number;
-	gasPrice: number;
-	gasLimit: number;
-	to: string;
-	value: bigint;
-	data: string;
-	v: number;
-	type: 0;
+	return keyring;
 };
 
-type Eip1559Txn = {
-	chainId: number;
-	nonce: number;
-	maxPriorityFeePerGas: number;
-	maxFeePerGas: number;
-	gasLimit: number;
-	to: string;
-	value: bigint;
-	data: string;
-	type: 2;
+export const onKeyringRequest: OnKeyringRequestHandler = async ({
+	request,
+	origin,
+}) => {
+	console.log(
+		`[Snap] keyring request (id=${
+			request.id ?? 'null'
+		}, origin=${origin}):`,
+		request,
+	);
+	if (!hasPermission(origin, request.method)) {
+		throw new Error(
+			`Origin '${origin}' is not allowed to call '${request.method}'`,
+		);
+	}
+	return handleKeyringRequest(await getKeyring(), request);
 };
-
-function formatUnits(value: bigint, decimals: number) {
-	let display = value.toString();
-
-	const negative = display.startsWith('-');
-	if (negative) display = display.slice(1);
-
-	display = display.padStart(decimals, '0');
-
-	let [integer, fraction] = [
-		display.slice(0, display.length - decimals),
-		display.slice(display.length - decimals),
-	];
-	fraction = fraction.replace(/(0+)$/, '');
-	return `${negative ? '-' : ''}${integer || '0'}${
-		fraction ? `.${fraction}` : ''
-	}`;
-}

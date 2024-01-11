@@ -3,46 +3,38 @@ import * as PairingAction from './actions/pairing';
 import * as KeyGenAction from './actions/keygen';
 import * as SignAction from './actions/sign';
 import * as Backup from './actions/backup';
-import { requestEntropy } from './entropy';
+import { encMessage, requestEntropy } from './entropy';
 import { fromHexStringToBytes } from './utils';
 import { saveSilentShareStorage, getSilentShareStorage } from './storage';
-import { StorageData } from '../types';
+import { SignMetadata, StorageData } from '../types';
 import { SnapError, SnapErrorCode } from '../error';
+import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
+import { v4 as uuid } from 'uuid';
+
+const TOKEN_LIFE_TIME = 60000;
 
 async function isPaired() {
-	let cond = await isStorageExist();
-	if (!cond) {
+	try {
+		let silentShareStorage = await getSilentShareStorage();
+		const deviceName = silentShareStorage.pairingData.deviceName;
 		return {
-			is_paired: false,
-			device_name: null,
+			isPaired: true,
+			deviceName,
+			isAccountExist: !!silentShareStorage.tempDistributedKey,
+		};
+	} catch {
+		return {
+			isPaired: false,
+			deviceName: null,
 		};
 	}
-	let silentShareStorage = await getSilentShareStorage();
-	const deviceName = silentShareStorage.pairing_data.device_name;
-	return {
-		is_paired: true,
-		device_name: deviceName,
-	};
 }
 
 async function unpair() {
 	await deleteStorage();
 }
 
-async function getAccountsInfo() {
-	let silentShareStorage = await getSilentShareStorage();
-	let accountsInfo:string[] = [];
-	silentShareStorage.distributed_keys.forEach((dk) => {
-		accountsInfo.push(dk.public_key);
-	});
-	return accountsInfo;
-}
-
 async function initPairing() {
-	let storageExist = await isStorageExist();
-	if (storageExist) {
-		throw new SnapError('Already paired', SnapErrorCode.AlreadyPaired);
-	}
 	let qrCode = await PairingAction.init();
 	return qrCode;
 }
@@ -51,76 +43,85 @@ async function runPairing() {
 	let result = await PairingAction.getToken();
 	await saveSilentShareStorage(result.silentShareStorage);
 	return {
-		pairing_status: 'paired',
-		device_name: result.deviceName,
-		elapsed_time: result.elapsedTime,
-		used_backup_data: result.usedBackupData,
+		pairingStatus: 'paired',
+		deviceName: result.deviceName,
+		elapsedTime: result.elapsedTime,
+		usedBackupData: result.usedBackupData,
+		tempDistributedKey: result.silentShareStorage.tempDistributedKey,
 	};
 }
 
 async function refreshPairing() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
-	let pairingData = silentShareStorage.pairing_data;
+	let pairingData = silentShareStorage.pairingData;
 	let result = await PairingAction.refreshToken(pairingData);
 	await saveSilentShareStorage({
 		...silentShareStorage,
-		pairing_data: result.newPairingData,
+		pairingData: result.newPairingData,
 	});
 	return result.newPairingData;
 }
 
 async function runKeygen() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
-	let pairingData = silentShareStorage.pairing_data;
+	let pairingData = silentShareStorage.pairingData;
 	// Refresh token if it is expired
-	if (pairingData.token_expiration < Date.now() - 60000) {
+	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
 		pairingData = await refreshPairing();
 	}
-
-	let distributedKeys = silentShareStorage.distributed_keys;
-	let accountId = distributedKeys.length + 1;
+	let wallets = silentShareStorage.wallets;
+	let accountId = Object.keys(wallets).length + 1;
 	let x1 = fromHexStringToBytes(await requestEntropy());
 	let result = await KeyGenAction.keygen(pairingData, accountId, x1);
-	distributedKeys.push({
-		account_id: accountId,
-		key_share_data: result.keyShareData,
-		public_key: result.public_key,
-	});
-	await saveSilentShareStorage({
+	saveSilentShareStorage({
 		...silentShareStorage,
-		distributed_keys: distributedKeys,
+		accountId: uuid(),
+		tempDistributedKey: {
+			publicKey: result.publicKey,
+			accountId,
+			keyShareData: result.keyShareData,
+		},
 	});
 	return {
-		public_key: result.public_key,
-		elapsed_time: result.elapsed_time,
+		distributedKey: {
+			publicKey: result.publicKey,
+			accountId: accountId,
+			keyShareData: result.keyShareData,
+		},
+		elapsedTime: result.elapsedTime,
 	};
 }
 
 async function runBackup() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
-	await Backup.backup(silentShareStorage.pairing_data,silentShareStorage.distributed_keys);
+	const encryptedMessage = await encMessage(
+		JSON.stringify(silentShareStorage.tempDistributedKey),
+	);
+	let pairingData = silentShareStorage.pairingData;
+	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
+		pairingData = await refreshPairing();
+	}
+	await Backup.backup(pairingData, encryptedMessage);
 }
 
 async function runSign(
-	publicKey: string,
 	hashAlg: string,
 	message: string,
 	messageHashHex: string,
-	sign_metadata: 'eth_transaction' | 'eth_sign',
+	signMetadata: SignMetadata,
+	accountId: number,
+	keyShare: IP1KeyShare,
 ) {
-	let silentShareStorage = await getSilentShareStorage();
-	let pairingData = silentShareStorage.pairing_data;
-	if (pairingData.token_expiration < Date.now() - 60000) {
-		pairingData = await refreshPairing();
+	if (messageHashHex.startsWith('0x')) {
+		messageHashHex = messageHashHex.slice(2);
 	}
-	let distributedKey = silentShareStorage.distributed_keys.find(
-		(dk) => dk.public_key === publicKey,
-	);
-	if (!distributedKey) {
-		throw new SnapError(
-			`No distributed key found for ${publicKey}`,
-			SnapErrorCode.NoDistributedKeyFound,
-		);
+	if (message.startsWith('0x')) {
+		message = message.slice(2);
+	}
+	let silentShareStorage = await getSilentShareStorage();
+	let pairingData = silentShareStorage.pairingData;
+	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
+		pairingData = await refreshPairing();
 	}
 	let messageHash = fromHexStringToBytes(messageHashHex);
 	if (messageHash.length !== 32) {
@@ -132,16 +133,16 @@ async function runSign(
 
 	return await SignAction.sign(
 		pairingData,
-		distributedKey,
+		keyShare,
 		hashAlg,
 		message,
 		messageHash,
-		sign_metadata,
+		signMetadata,
+		accountId,
 	);
 }
 
 export {
-	getAccountsInfo,
 	initPairing,
 	runPairing,
 	runKeygen,

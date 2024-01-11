@@ -1,7 +1,6 @@
 import { SnapError, SnapErrorCode } from './error';
 
 const baseUrl = 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net';
-// const baseUrl = 'http://127.0.0.1:5001/mobile-wallet-mm-snap/us-central1';
 
 interface Response {
 	response: any;
@@ -31,34 +30,34 @@ const modifiedFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 };
 
 export const getTokenEndpoint = async (
-	pairing_id: string,
+	pairingId: string,
 	signature: string,
 ) => {
 	const url = baseUrl + `/getToken`;
 	const data: {
 		token: string;
-		app_public_key: string;
-		device_name: string;
-		token_expiration: number;
-		backup_data?: string;
+		appPublicKey: string;
+		deviceName: string;
+		tokenExpiration: number;
+		backupData?: string;
 	} = await modifiedFetch(url, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
 		},
-		body: JSON.stringify({ pairing_id, signature }),
+		body: JSON.stringify({ pairingId, signature }),
 	});
 	return data;
 };
 
 export const refreshTokenEndpoint = async (
 	token: string,
-	signed_token: string,
+	signedToken: string,
 ) => {
 	const url = baseUrl + `/refreshToken`;
 	const data: {
 		token: string;
-		token_expiration: number;
+		tokenExpiration: number;
 	} = await modifiedFetch(url, {
 		method: 'POST',
 		headers: {
@@ -66,7 +65,7 @@ export const refreshTokenEndpoint = async (
 			authorization: `Bearer ${token}`,
 		},
 		body: JSON.stringify({
-			signed_token,
+			signedToken,
 		}),
 	});
 	return data;
@@ -90,8 +89,14 @@ export const sendMessage = async <T>(
 			collection: type,
 			data: conversation,
 			expectResponse,
-			docId
+			docId,
 		}),
 	});
 	return data;
+};
+
+export const snapVersion = async () => {
+	const url = baseUrl + `/snapVersion`;
+	const data = await fetch(url);
+	return await data.text();
 };

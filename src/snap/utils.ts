@@ -1,10 +1,15 @@
 import { SnapError, SnapErrorCode } from '../error';
+import { JsonTx } from '@ethereumjs/tx';
+import type { Json } from '@metamask/utils';
 
 export const fromHexStringToBytes = (hexString: string) => {
 	try {
-		return Uint8Array.from(
-			hexString.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)),
-		);
+		const matched = hexString.match(/.{1,2}/g);
+		if (matched) {
+			return Uint8Array.from(matched.map((byte) => parseInt(byte, 16)));
+		} else {
+			throw new Error(`invalid-hex-string`);
+		}
 	} catch (error) {
 		throw error instanceof Error
 			? error
@@ -31,11 +36,11 @@ export function checkOwnKeys(keys: string[], object: object) {
 	});
 }
 
-function randomInteger(min, max) {
+function randomInteger(min: number, max: number) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-export function random_string(n): string {
+export function random_string(n: number): string {
 	// A n length string taking characters from lower_case, upper_case and digits
 	var result = '';
 	var characters =
@@ -46,7 +51,7 @@ export function random_string(n): string {
 	return result;
 }
 
-export function random_pairing_id(): string {
+export function randomPairingId(): string {
 	return random_string(19);
 }
 
@@ -70,4 +75,41 @@ export function Uint8ArrayTob64(bytes: Uint8Array): string {
 
 export function b64ToUint8Array(str: string): Uint8Array {
 	return Uint8Array.from(Buffer.from(str, 'base64'));
+}
+
+export function b64ToString(str: string): string {
+	return Buffer.from(str, 'base64').toString('utf8');
+}
+
+/**
+ * Serializes a transaction by removing undefined properties and converting them to null.
+ *
+ * @param tx - The transaction object.
+ * @param type - The type of the transaction.
+ * @returns The serialized transaction.
+ */
+export function serializeTransaction(tx: JsonTx, type: number): Json {
+	const serializableSignedTx: Record<string, any> = {
+		...tx,
+		type,
+	};
+	// Make tx serializable
+	// toJSON does not remove undefined or convert undefined to null
+	Object.entries(serializableSignedTx).forEach(([key, _]) => {
+		if (serializableSignedTx[key] === undefined) {
+			delete serializableSignedTx[key];
+		}
+	});
+
+	return serializableSignedTx;
+}
+
+/**
+ * Determines whether the given CAIP-2 chain ID represents an EVM-based chain.
+ *
+ * @param caip2ChainId - The CAIP-2 chain ID to check.
+ * @returns Returns true if the chain is EVM-based, otherwise false.
+ */
+export function isEvmChain(caip2ChainId: string): boolean {
+	return caip2ChainId.startsWith('eip155:');
 }

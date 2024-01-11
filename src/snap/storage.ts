@@ -1,4 +1,3 @@
-import * as passworder from '@metamask/browser-passworder';
 import { StorageData } from '../types';
 import { SnapError, SnapErrorCode } from '../error';
 
@@ -9,7 +8,7 @@ const STORAGE_KEY = 'SilentShare1';
  *
  * @returns true if exists, false otherwise
  */
-async function isStorageExist(): Promise<boolean> {
+const isStorageExist = async (): Promise<boolean> => {
 	try {
 		let data = await snap.request({
 			method: 'snap_manageState',
@@ -21,39 +20,35 @@ async function isStorageExist(): Promise<boolean> {
 			? new SnapError(error.message, SnapErrorCode.StorageError)
 			: new SnapError(`unknown-error`, SnapErrorCode.UnknownError);
 	}
-}
+};
 
 /**
  * Delete the stored data, if it exists.
  */
-async function deleteStorage() {
+const deleteStorage = async () => {
 	await snap.request({
 		method: 'snap_manageState',
 		params: { operation: 'clear' },
 	});
-}
+};
 
 /**
  * Save SilentShareStorage
  *
  * @param data obj to save
  */
-async function saveSilentShareStorage(data: StorageData) {
+const saveSilentShareStorage = async (data: StorageData) => {
 	try {
 		if (data == null) {
 			throw new SnapError(
 				'Storage data cannot be null',
-				SnapErrorCode.InvalidData,
+				SnapErrorCode.InvalidStorageData,
 			);
 		}
 
-		// const encryptionKey = await getEncryptionKey();
-		// let encryptedStr = await passworder.encrypt(
-		// 	encryptionKey,
-		// 	JSON.stringify(data),
-		// );
-
-		let state = {};
+		let state: {
+			SilentShare1?: string;
+		} = {};
 		state[STORAGE_KEY] = JSON.stringify(data);
 
 		await snap.request({
@@ -65,20 +60,18 @@ async function saveSilentShareStorage(data: StorageData) {
 			? new SnapError(error.message, SnapErrorCode.StorageError)
 			: new SnapError(`unknown-error`, SnapErrorCode.UnknownError);
 	}
-}
+};
 
 /**
  * Retrieve SilentShareStorage
  *
  * @returns SilentShareStorage object
  */
-async function getSilentShareStorage() {
+const getSilentShareStorage = async (): Promise<StorageData> => {
 	try {
-		if (!(await isStorageExist())) {
-			throw new SnapError(
-				'Wallet not created yet',
-				SnapErrorCode.WalletNotCreated,
-			);
+		const _isStorageExist = await isStorageExist();
+		if (!_isStorageExist) {
+			throw new SnapError('Snap is not paired', SnapErrorCode.NotPaired);
 		}
 
 		let state = await snap.request({
@@ -86,22 +79,24 @@ async function getSilentShareStorage() {
 			params: { operation: 'get' },
 		});
 
-		// const encryptionKey = await getEncryptionKey();
+		if (!state) {
+			throw new SnapError(
+				'Snap failed to fetch state',
+				SnapErrorCode.UnknownError,
+			);
+		}
 
-		// const decryptedStr: string = (await passworder.decrypt(
-		// 	encryptionKey,
-		// 	state[STORAGE_KEY] as string,
-		// )) as unknown as string;
 		const jsonObject: StorageData = JSON.parse(
 			state[STORAGE_KEY] as string,
 		);
+
 		return jsonObject;
 	} catch (error) {
 		throw error instanceof Error
 			? new SnapError(error.message, SnapErrorCode.StorageError)
 			: new SnapError(`unknown-error`, SnapErrorCode.UnknownError);
 	}
-}
+};
 
 export {
 	isStorageExist,

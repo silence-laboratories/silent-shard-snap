@@ -1,87 +1,86 @@
 {
-  "name": "@silencelaboratories/silent-shard-snap",
-  "version": "1.1.1",
-  "description": "Distributed wallet between Metamask plugin and SilentShard mobile app",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/MetaMask/snap-template.git"
-  },
-  "license": "MIT",
-  "main": "src/index.js",
-  "files": [
-    "dist/",
-    "images/",
-    "snap.manifest.json"
-  ],
-  "scripts": {
-    "build:clean": "yarn clean && yarn build",
-    "watch:webpack": "onchange './src/**/*' 'index.js' 'index.html' --initial -- npx webpack",
-    "watch:serve": "nodemon --watch ./dist/**/* --exec 'mm-snap serve'",
-    "snap-dev": "concurrently 'yarn watch:webpack' 'yarn watch:serve' ",
-    "build:website": "node ./scripts/build-website.js",
-    "build": "mm-snap build",
-    "serve": "mm-snap serve",
-    "clean": "rimraf dist/*",
-    "test": "echo 'TODO'",
-    "manifest": "mm-snap manifest --fix",
-    "eval": "mm-snap eval -b dist/snap.js",
-    "lint:eslint": "eslint . --cache --ext js,ts",
-    "lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' --ignore-path .gitignore",
-    "lint": "yarn lint:eslint && yarn lint:misc --check",
-    "lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
-    "lint:changelog": "yarn auto-changelog validate"
-  },
-  "devDependencies": {
-    "@metamask/auto-changelog": "^2.5.0",
-    "@metamask/eslint-config": "^8.0.0",
-    "@metamask/eslint-config-jest": "^8.0.0",
-    "@metamask/eslint-config-nodejs": "^8.0.0",
-    "@metamask/snaps-cli": "^0.30.0",
-    "@types/libsodium-wrappers": "^0.7.10",
-    "@types/node": "^18.6.2",
-    "@types/webpack": "^5.28.0",
-    "concurrently": "^8.0.1",
-    "eslint": "^7.30.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-import": "^2.23.4",
-    "eslint-plugin-jest": "^24.4.0",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^3.4.0",
-    "hook-shell-script-webpack-plugin": "^0.3.0",
-    "mkdirp": "^1.0.4",
-    "nodemon": "^2.0.22",
-    "onchange": "^7.1.0",
-    "prettier": "^2.3.2",
-    "rimraf": "^3.0.2",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.7.4"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  },
-  "dependencies": {
-    "@babel/register": "^7.18.9",
-    "@com.silencelaboratories/ecdsa-tss": "^1.1.1",
-    "@ethereumjs/rlp": "^4.0.1",
-    "@metamask/browser-passworder": "^4.0.2",
-    "@metamask/key-tree": "^4.0.0",
-    "@metamask/snaps-types": "^0.30.0",
-    "@metamask/snaps-ui": "^0.32.2",
-    "@metamask/snaps-webpack-plugin": "^0.18.1",
-    "babel-loader": "^8.2.5",
-    "buffer": "^6.0.3",
-    "cli": "^1.0.1",
-    "crypto-js": "^4.1.1",
-    "fast-xml-parser": "^4.0.9",
-    "html-webpack-plugin": "^5.5.0",
-    "libsodium-wrappers": "^0.7.11",
-    "webpack": "^5.74.0",
-    "webpack-cli": "^4.10.0",
-    "webpack-merge": "^5.8.0",
-    "webpackbar": "^5.0.2"
-  }
+	"name": "@silencelaboratories/silent-shard-snap",
+	"version": "1.2.0",
+	"description": "Distributed wallet between Metamask plugin and SilentShard mobile app",
+	"keywords": [
+		"metamask",
+		"snap",
+		"keyring",
+		"silent shard"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
+	},
+	"homepage": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap",
+	"license": "MIT",
+	"main": "dist/bundle.js",
+	"files": [
+		"dist/",
+		"images/",
+		"snap.manifest.json"
+	],
+	"scripts": {
+		"build": "mm-snap build",
+		"build:clean": "yarn clean && yarn build",
+		"clean": "rimraf dist",
+		"lint": "yarn lint:eslint && yarn lint:misc && yarn lint:deps && yarn lint:types",
+		"lint:deps": "depcheck",
+		"lint:eslint": "eslint . --cache --ext js,jsx,ts,tsx",
+		"lint:fix": "yarn lint:eslint --fix && yarn lint:misc --write",
+		"lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' '!snap.manifest.json' --check",
+		"lint:types": "tsc --noEmit",
+		"serve": "mm-snap serve",
+		"start": "NODE_ENV='development' mm-snap watch"
+	},
+	"dependencies": {
+		"@ethereumjs/common": "^3.1.2",
+		"@ethereumjs/tx": "^4.1.2",
+		"@ethereumjs/util": "^8.0.5",
+		"@metamask/eth-sig-util": "^7.0.0",
+		"@metamask/keyring-api": "^1.1.0",
+		"@metamask/snaps-sdk": "^1.3.1",
+		"@metamask/snaps-types": "^3.0.0",
+		"@metamask/utils": "^8.1.0",
+		"uuid": "^9.0.0",
+		"@silencelaboratories/ecdsa-tss": "^1.1.2",
+		"@metamask/snaps-ui": "^0.35.2-flask.1",
+		"buffer": "^6.0.3",
+		"crypto-js": "^4.1.1",
+		"keccak256": "^1.0.6",
+		"libsodium-wrappers": "^0.7.11"
+	},
+	"devDependencies": {
+		"@lavamoat/allow-scripts": "^2.0.3",
+		"@metamask/auto-changelog": "^3.3.0",
+		"@metamask/eslint-config": "^12.2.0",
+		"@metamask/eslint-config-jest": "^12.1.0",
+		"@metamask/eslint-config-nodejs": "^12.1.0",
+		"@metamask/eslint-config-typescript": "^12.1.0",
+		"@metamask/snaps-cli": "^3.0.0",
+		"@types/node": "^20.6.2",
+		"@typescript-eslint/eslint-plugin": "^5.33.0",
+		"@typescript-eslint/parser": "^5.33.0",
+		"depcheck": "^1.4.6",
+		"eslint": "^8.21.0",
+		"eslint-config-prettier": "^8.1.0",
+		"eslint-plugin-import": "^2.26.0",
+		"eslint-plugin-jest": "^26.8.2",
+		"eslint-plugin-jsdoc": "^39.2.9",
+		"eslint-plugin-n": "^16.1.0",
+		"eslint-plugin-prettier": "^4.2.1",
+		"eslint-plugin-promise": "^6.1.1",
+		"prettier": "^2.2.1",
+		"rimraf": "^3.0.2",
+		"typescript": "^4.7.4",
+		"@types/libsodium-wrappers": "^0.7.10"
+	},
+	"packageManager": "yarn@3.2.1",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	}
 }

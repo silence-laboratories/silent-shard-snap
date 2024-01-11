@@ -1,21 +1,24 @@
 import { SnapError, SnapErrorCode } from '../../error';
-import { sendMessage } from '../../firebaseEndpoints';
-import { DistributedKey, PairingData } from '../../types';
-import { encMessage } from '../entropy';
+import { sendMessage } from '../../firebaseApi';
+import { BackupConversation, PairingData } from '../../types';
 
 export const backup = async (
 	pairingData: PairingData,
-	distributedKeys: DistributedKey[],
+	encryptedMessage: string,
 ) => {
 	try {
-		const encryptedMessage = await encMessage(JSON.stringify(distributedKeys));
 		const response = await sendMessage(
 			pairingData.token,
 			'backup',
-			{ backup_data: encryptedMessage, is_backed_up: null,  pairing_id: pairingData.pairing_id  },
+			{
+				backupData: encryptedMessage,
+				pairingId: pairingData.pairingId,
+				createdAt: Date.now(),
+				expiry: 30000,
+			} as BackupConversation,
 			false,
 		);
-		if (response && !response.is_backed_up) {
+		if (response && !response.isBackedUp) {
 			throw new SnapError('Backup failed', SnapErrorCode.BackupFailed);
 		}
 	} catch (error) {

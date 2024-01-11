@@ -1,7 +1,11 @@
-import { P1Signature } from '@com.silencelaboratories/ecdsa-tss';
+import {
+	IP1KeyShare,
+	P1Signature,
+	randBytes,
+} from '@silencelaboratories/ecdsa-tss';
 import * as utils from '../utils';
-import { sendMessage } from '../../firebaseEndpoints';
-import { ConversationSign, DistributedKey, PairingData } from '../../types';
+import { sendMessage } from '../../firebaseApi';
+import { PairingData, SignConversation, SignMetadata } from '../../types';
 import _sodium, { base64_variants } from 'libsodium-wrappers';
 import { SnapError, SnapErrorCode } from '../../error';
 
@@ -9,74 +13,85 @@ let running: boolean = false;
 
 type SignResult = {
 	signature: string;
-	rec_id: number;
-	elapsed_time: number;
+	recId: number;
+	elapsedTime: number;
 };
 
 export const sign = async (
 	pairingData: PairingData,
-	distributedKey: DistributedKey,
+	keyShare: IP1KeyShare,
 	hashAlg: string,
 	message: string,
 	messageHash: Uint8Array,
-	sign_metadata: 'eth_transaction' | 'eth_sign',
+	signMetadata: SignMetadata,
+	accountId: number,
 ): Promise<SignResult> => {
 	try {
 		if (running) {
 			throw new SnapError(
 				`Sign already running`,
-				SnapErrorCode.ResourceBusy,
+				SnapErrorCode.SignResourceBusy,
 			);
 		}
 		running = true;
 		let startTime = Date.now();
+		const sessionId = _sodium.to_hex(await randBytes(32)); //utils.random_session_id();
 
-		const account_id = distributedKey.account_id;
-		const session_id = utils.random_session_id();
-		let p1KeyShareObj = distributedKey.key_share_data;
+		let p1KeyShareObj = keyShare;
 		let round = 1;
-		const p1 = new P1Signature(session_id, messageHash, p1KeyShareObj);
+		const p1 = new P1Signature(sessionId, messageHash, p1KeyShareObj);
 
-		let signConversation: ConversationSign = {
-			sign_metadata,
-			account_id,
-			created_at: Date.now(),
+		let signConversation: SignConversation = {
+			signMetadata,
+			accountId,
+			createdAt: Date.now(),
 			expiry: 30000,
 			message: {
 				party: 1,
 				round: round,
 			},
-			session_id,
-			hash_alg: hashAlg,
-			public_key: distributedKey.public_key,
-			sign_message: message,
+			sessionId,
+			hashAlg: hashAlg,
+			publicKey: keyShare.public_key,
+			signMessage: message,
+			messageHash: utils.toHexString(messageHash),
+			isApproved: null,
 		};
 
 		let sign = null;
-		let rec_id = null;
+		let recId = null;
 		let expectResponse = true;
 		await _sodium.ready;
-		while (sign === null) {
-			let decMessage: string | null = null;
-			if (signConversation.message.message) {
-				decMessage = utils.uint8ArrayToUtf8String(
+		while (sign === null || recId === null) {
+			let decryptedMessage: string | null = null;
+			if (
+				signConversation.message.message &&
+				signConversation.message.nonce
+			) {
+				decryptedMessage = utils.uint8ArrayToUtf8String(
 					_sodium.crypto_box_open_easy(
 						utils.b64ToUint8Array(signConversation.message.message),
 						_sodium.from_hex(signConversation.message.nonce),
-						_sodium.from_hex(pairingData.app_public_key!),
-						_sodium.from_hex(pairingData.web_enc_private_key!),
+						_sodium.from_hex(pairingData.appPublicKey!),
+						_sodium.from_hex(pairingData.webEncPrivateKey!),
 					),
 				);
 			}
-			const msg = await p1.processMessage(decMessage).catch((error) => {
-				throw new SnapError(
-					`Internal library error: ${error}`,
-					SnapErrorCode.InternalLibError,
-				);
-			});
-			if (msg.signature) {
+			const decodedMessage = decryptedMessage
+				? utils.b64ToString(decryptedMessage)
+				: null;
+
+			const msg = await p1
+				.processMessage(decodedMessage)
+				.catch((error) => {
+					throw new SnapError(
+						`Internal library error: ${error}`,
+						SnapErrorCode.InternalLibError,
+					);
+				});
+			if (msg.signature && msg.recid !== undefined) {
 				sign = msg.signature;
-				rec_id = msg.recid;
+				recId = msg.recid;
 				expectResponse = false;
 			}
 			const nonce = _sodium.randombytes_buf(
@@ -84,10 +99,13 @@ export const sign = async (
 			);
 			const encMessage = utils.Uint8ArrayTob64(
 				_sodium.crypto_box_easy(
-					msg.msg_to_send,
+					_sodium.to_base64(
+						msg.msg_to_send,
+						base64_variants.ORIGINAL,
+					),
 					nonce,
-					_sodium.from_hex(pairingData.app_public_key),
-					_sodium.from_hex(pairingData.web_enc_private_key),
+					_sodium.from_hex(pairingData.appPublicKey),
+					_sodium.from_hex(pairingData.webEncPrivateKey),
 				),
 			);
 			signConversation = {
@@ -99,16 +117,16 @@ export const sign = async (
 					nonce: _sodium.to_hex(nonce),
 				},
 			};
-			const signConversationNew = (await sendMessage(
+			const signConversationNew = await sendMessage<SignConversation>(
 				pairingData.token,
 				'sign',
 				signConversation,
 				expectResponse,
-			)) as ConversationSign;
-			if (expectResponse) {
+			);
+			if (expectResponse && signConversationNew) {
 				signConversation = signConversationNew;
 			}
-			if (signConversation.is_approved === false) {
+			if (signConversation.isApproved === false) {
 				throw new SnapError(
 					`User(phone) rejected sign request`,
 					SnapErrorCode.UserPhoneDenied,
@@ -120,11 +138,14 @@ export const sign = async (
 		running = false;
 		return {
 			signature: sign,
-			rec_id,
-			elapsed_time: Date.now() - startTime,
+			recId,
+			elapsedTime: Date.now() - startTime,
 		};
 	} catch (error) {
 		if (error instanceof SnapError) {
+			if (error.code != SnapErrorCode.SignResourceBusy) {
+				running = false;
+			}
 			throw error;
 		} else if (error instanceof Error) {
 			throw new SnapError(error.message, SnapErrorCode.KeygenFailed);

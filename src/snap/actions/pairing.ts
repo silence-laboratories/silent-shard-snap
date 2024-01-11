@@ -3,15 +3,15 @@ import {
 	getTokenEndpoint,
 	refreshTokenEndpoint,
 	sendMessage,
-} from '../../firebaseEndpoints';
+} from '../../firebaseApi';
 import _sodium from 'libsodium-wrappers';
-import { DistributedKey, PairingData, StorageData } from '../../types';
+import { DistributedKey, PairingData, StorageData, Wallet } from '../../types';
 import { SnapError, SnapErrorCode } from '../../error';
 import { decMessage } from '../entropy';
-let running = false;
+import { v4 as uuid } from 'uuid';
 
 export interface PairingDataInit {
-	pairing_id: string;
+	pairingId: string;
 	encPair: _sodium.KeyPair;
 	signPair: _sodium.KeyPair;
 }
@@ -20,22 +20,22 @@ let pairingDataInit: PairingDataInit;
 
 export const init = async () => {
 	try {
-		let pairing_id = utils.random_pairing_id();
+		let pairingId = utils.randomPairingId();
 
 		await _sodium.ready;
 		const encPair = _sodium.crypto_box_keypair();
 		const signPair = _sodium.crypto_sign_keypair();
 
 		pairingDataInit = {
-			pairing_id,
+			pairingId,
 			encPair,
 			signPair,
 		};
 
 		let qrCode = JSON.stringify({
-			pairing_id,
-			web_enc_public_key: _sodium.to_hex(encPair.publicKey),
-			sign_public_key: _sodium.to_hex(signPair.publicKey),
+			pairingId,
+			webEncPublicKey: _sodium.to_hex(encPair.publicKey),
+			signPublicKey: _sodium.to_hex(signPair.publicKey),
 		});
 
 		return qrCode;
@@ -48,79 +48,103 @@ export const init = async () => {
 
 export const getToken = async () => {
 	try {
-		if (running)
-			throw new SnapError(
-				'Pairing is already running',
-				SnapErrorCode.ResourceBusy,
-			);
-
 		if (!pairingDataInit) {
 			throw new SnapError(
 				'Pairing data not initialized',
 				SnapErrorCode.PairingNotInitialized,
 			);
 		}
-		running = true;
 
 		let startTime = Date.now();
 
 		const signature = _sodium.crypto_sign_detached(
-			pairingDataInit.pairing_id,
+			pairingDataInit.pairingId,
 			pairingDataInit.signPair.privateKey,
 		);
 
 		const data = await getTokenEndpoint(
-			pairingDataInit.pairing_id,
+			pairingDataInit.pairingId,
 			_sodium.to_hex(signature),
 		);
-		let distributed_keys = [];
+		let tempDistributedKey: DistributedKey | null = null;
 		let usedBackupData = false;
-		if (data.backup_data) {
+		if (data.backupData) {
 			try {
-				const decreptedMessage =  await decMessage(data.backup_data);
-				distributed_keys = JSON.parse(utils.uint8ArrayToUtf8String(decreptedMessage)) as DistributedKey[];
-				await sendMessage(data.token, 'pairing', { is_paired: true }, false, pairingDataInit.pairing_id);
+				const decreptedMessage = await decMessage(data.backupData);
+				tempDistributedKey = JSON.parse(
+					utils.uint8ArrayToUtf8String(decreptedMessage),
+				);
+				await sendMessage(
+					data.token,
+					'pairing',
+					{ isPaired: true },
+					false,
+					pairingDataInit.pairingId,
+				);
 				usedBackupData = true;
-			}catch (error){
-				await sendMessage(data.token, 'pairing', { is_paired: false }, false, pairingDataInit.pairing_id);
-				if(error instanceof SnapError) {
+			} catch (error) {
+				try {
+					await sendMessage(
+						data.token,
+						'pairing',
+						{ isPaired: false },
+						false,
+						pairingDataInit.pairingId,
+					);
+				} catch (error) {
 					throw error;
-				} else if(error instanceof Error) {
-					throw new SnapError(error.message,SnapErrorCode.InvalidBackupData);
-				} else 
-				throw new SnapError('unknown-error',SnapErrorCode.UnknownError)
+				}
+				if (error instanceof SnapError) {
+					throw error;
+				} else if (error instanceof Error) {
+					throw new SnapError(
+						error.message,
+						SnapErrorCode.InvalidBackupData,
+					);
+				} else
+					throw new SnapError(
+						'unknown-error',
+						SnapErrorCode.UnknownError,
+					);
 			}
 		} else {
-			await sendMessage(data.token, 'pairing', { is_paired: true }, false, pairingDataInit.pairing_id);
-		} 
-		const pairing_data: PairingData = {
-			pairing_id: pairingDataInit.pairing_id,
-			web_enc_public_key: _sodium.to_hex(
-				pairingDataInit.encPair.publicKey,
-			),
-			web_enc_private_key: _sodium.to_hex(
+			await sendMessage(
+				data.token,
+				'pairing',
+				{ isPaired: true },
+				false,
+				pairingDataInit.pairingId,
+			);
+		}
+		const pairingData: PairingData = {
+			pairingId: pairingDataInit.pairingId,
+			webEncPublicKey: _sodium.to_hex(pairingDataInit.encPair.publicKey),
+			webEncPrivateKey: _sodium.to_hex(
 				pairingDataInit.encPair.privateKey,
 			),
-			web_sign_public_key: _sodium.to_hex(
+			webSignPublicKey: _sodium.to_hex(
 				pairingDataInit.signPair.publicKey,
 			),
-			web_sign_private_key: _sodium.to_hex(
+			webSignPrivateKey: _sodium.to_hex(
 				pairingDataInit.signPair.privateKey,
 			),
-			app_public_key: data.app_public_key,
+			appPublicKey: data.appPublicKey,
 			token: data.token,
-			token_expiration: data.token_expiration,
-			device_name: data.device_name,
+			tokenExpiration: data.tokenExpiration,
+			deviceName: data.deviceName,
 		};
-		running = false;
+
 		return {
 			silentShareStorage: {
-				pairing_data,
-				distributed_keys,
-			},
+				pairingData,
+				wallets: {},
+				requests: {},
+				tempDistributedKey,
+				accountId: tempDistributedKey ? uuid() : null,
+			} as StorageData,
 			elapsedTime: Date.now() - startTime,
-			deviceName: data.device_name,
-			usedBackupData
+			deviceName: data.deviceName,
+			usedBackupData,
 		};
 	} catch (error) {
 		if (error instanceof Error) {
@@ -135,7 +159,7 @@ export const refreshToken = async (pairingData: PairingData) => {
 		let signature: Uint8Array;
 		signature = _sodium.crypto_sign_detached(
 			pairingData.token,
-			_sodium.from_hex(pairingData.web_sign_private_key),
+			_sodium.from_hex(pairingData.webSignPrivateKey),
 		);
 
 		const data = await refreshTokenEndpoint(
@@ -146,7 +170,6 @@ export const refreshToken = async (pairingData: PairingData) => {
 			...pairingData,
 			...data,
 		};
-		running = false;
 		return {
 			newPairingData: newPairingData,
 			elapsedTime: Date.now() - startTime,
