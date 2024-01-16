@@ -16,7 +16,7 @@ import { StorageData } from './types';
 window.Buffer = window.Buffer || Buffer;
 
 let keyring: SimpleKeyring;
-const SNAP_VERSION = '1.2.0';
+const SNAP_VERSION = '1.2.2';
 
 const showConfirmationMessage = async (
 	prompt: string,
