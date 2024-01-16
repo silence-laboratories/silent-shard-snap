@@ -1919,16 +1919,7 @@
     readable-web-to-node-stream "^3.0.2"
     tar-stream "^3.1.6"
 
-"@metamask/snaps-registry@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@metamask/snaps-registry/-/snaps-registry-2.0.0.tgz#3c98b06f2f0fb8976276ab5ba67f59b999a5c289"
-  integrity sha512-3J96WtvmblR4yCzH80Nkk+9LvyGPByj9Mc5ryox3H4JMMmotFiZvfgJFQatGk0s7n8juwaRfF3gAh5FQfFTyHg==
-  dependencies:
-    "@metamask/utils" "^8.1.0"
-    "@noble/secp256k1" "^1.7.1"
-    superstruct "^1.0.3"
-
-"@metamask/snaps-registry@^2.1.0":
+"@metamask/snaps-registry@^2.0.0", "@metamask/snaps-registry@^2.1.0":
   version "2.1.1"
   resolved "https://registry.yarnpkg.com/@metamask/snaps-registry/-/snaps-registry-2.1.1.tgz#83dab6407ac60e730a745fcc8331de9e84a2442c"
   integrity sha512-HkyNwhZUjPMe61OP+7GsibSe62a9S5i87Ruzhq5qd6Y+1ytCUK9ftxFvPpCxWZqGWAP25Y04awXEc/9KUsvTDg==
