@@ -1473,23 +1473,7 @@
     semver "^7.3.5"
     yargs "^17.0.1"
 
-"@metamask/base-controller@^3.2.0":
-  version "3.2.0"
-  resolved "https://registry.npmjs.org/@metamask/base-controller/-/base-controller-3.2.0.tgz"
-  integrity sha512-7w84yAquLLy06x8r5HaKU0rpRag6SkrK0BlsVguMqLFTi/BRVhx+0bHz4GI4PFxnh+qH19bk42nU+B3gWm2c6w==
-  dependencies:
-    "@metamask/utils" "^6.2.0"
-    immer "^9.0.6"
-
-"@metamask/base-controller@^3.2.2":
-  version "3.2.2"
-  resolved "https://registry.yarnpkg.com/@metamask/base-controller/-/base-controller-3.2.2.tgz#c050055b6a235039aeda99375b66e162c4cee809"
-  integrity sha512-5aUI+q+CkrifITDg2r+vYkWGZ0dmBM842sZWxrADRuRPliAl2GCW2Sh4dYIJRWTy4YiGLvLA8FeACRcchQ3onQ==
-  dependencies:
-    "@metamask/utils" "^6.2.0"
-    immer "^9.0.6"
-
-"@metamask/base-controller@^3.2.3":
+"@metamask/base-controller@^3.2.0", "@metamask/base-controller@^3.2.2", "@metamask/base-controller@^3.2.3":
   version "3.2.3"
   resolved "https://registry.yarnpkg.com/@metamask/base-controller/-/base-controller-3.2.3.tgz#7436a14f6789acf0814952dabaa70ee4fb7d473c"
   integrity sha512-k66oZe7BOEx0D5N5X8feE/32QlrUTmiEHHAZU/yCac2+VHllJOCEQV/cTeaAtgepnEf8O7SskvYZN+eIjgS99w==
@@ -1498,9 +1482,9 @@
     immer "^9.0.6"
 
 "@metamask/base-controller@^4.0.0":
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/@metamask/base-controller/-/base-controller-4.0.0.tgz#f3b86923a8a4f7bf5a35f3e3f165c0c25ca7cc40"
-  integrity sha512-ajG/1vXt3USkxEoYQd8aTckXqgMiuD4StRziTxXt0p5ROkKRZOp9luhwYrW/EBLJtdNEYXLAK5864q9okfRJHQ==
+  version "4.1.0"
+  resolved "https://registry.yarnpkg.com/@metamask/base-controller/-/base-controller-4.1.0.tgz#afddff1551b675ff240ae58ae841e389edadfa39"
+  integrity sha512-dr7CUdeh+7qt4G0iSSf6ue57OlrPHow9IiLTkdyCpIhpfd0UAYr5Q4uk+sT84VBl7VLIyy8x0z5blEA2LHY1Cg==
   dependencies:
     "@metamask/utils" "^8.2.0"
     immer "^9.0.6"
