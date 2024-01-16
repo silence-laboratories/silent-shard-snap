@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Silent Shard",
   "proposedName": "Silent Shard",
   "repository": {
@@ -7,7 +7,7 @@
     "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
   },
   "source": {
-    "shasum": "PJfNKAxlCK9pJ2FoOSdJHhvsqqrSoGn1hX1QA1itzZc=",
+    "shasum": "+/ASyq9/mRMjVDBJ2ybVZH15fpCTaWLNfk8EC7j83NM=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
