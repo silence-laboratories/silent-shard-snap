@@ -1,6 +1,6 @@
 {
 	"name": "@silencelaboratories/silent-shard-snap",
-	"version": "1.2.3",
+	"version": "1.2.4",
 	"description": "Distributed wallet between Metamask plugin and SilentShard mobile app",
 	"keywords": [
 		"metamask",
