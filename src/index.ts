@@ -16,7 +16,7 @@ import { StorageData } from './types';
 window.Buffer = window.Buffer || Buffer;
 
 let keyring: SimpleKeyring;
-const SNAP_VERSION = '1.2.3';
+const SNAP_VERSION = '1.2.4';
 
 const showConfirmationMessage = async (
 	prompt: string,
@@ -43,12 +43,6 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 	origin,
 	request,
 }) => {
-	console.log(
-		`[Snap] custom method request (id=${
-			request.id ?? 'null'
-		}, origin=${origin}):`,
-		request,
-	);
 	if (!hasPermission(origin, request.method)) {
 		throw new Error(
 			`Origin '${origin}' is not allowed to call '${request.method}'`,
@@ -212,12 +206,6 @@ export const onKeyringRequest: OnKeyringRequestHandler = async ({
 	request,
 	origin,
 }) => {
-	console.log(
-		`[Snap] keyring request (id=${
-			request.id ?? 'null'
-		}, origin=${origin}):`,
-		request,
-	);
 	if (!hasPermission(origin, request.method)) {
 		throw new Error(
 			`Origin '${origin}' is not allowed to call '${request.method}'`,
