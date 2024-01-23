@@ -35,7 +35,7 @@ export const sign = async (
 		}
 		running = true;
 		let startTime = Date.now();
-		const sessionId = _sodium.to_hex(await randBytes(32)); //utils.random_session_id();
+		const sessionId = _sodium.to_hex(await randBytes(32));
 
 		let p1KeyShareObj = keyShare;
 		let round = 1;
