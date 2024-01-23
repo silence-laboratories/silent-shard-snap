@@ -20,7 +20,7 @@ let pairingDataInit: PairingDataInit;
 
 export const init = async () => {
 	try {
-		let pairingId = utils.randomPairingId();
+		let pairingId = await utils.randomPairingId();
 
 		await _sodium.ready;
 		const encPair = _sodium.crypto_box_keypair();

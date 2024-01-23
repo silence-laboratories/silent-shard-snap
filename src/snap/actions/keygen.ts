@@ -32,7 +32,7 @@ export const keygen = async (
 		running = true;
 
 		const startTime = Date.now();
-		const sessionId = _sodium.to_hex(await randBytes(32)); //utils.random_session_id();
+		const sessionId = _sodium.to_hex(await randBytes(32));
 		const accountId = accountIdNumber;
 		const p1 = new P1KeyGen(sessionId, x1);
 		await p1.init();

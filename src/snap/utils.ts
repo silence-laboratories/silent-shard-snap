@@ -1,6 +1,7 @@
 import { SnapError, SnapErrorCode } from '../error';
 import { JsonTx } from '@ethereumjs/tx';
 import type { Json } from '@metamask/utils';
+import { randBytes } from '@silencelaboratories/ecdsa-tss';
 
 export const fromHexStringToBytes = (hexString: string) => {
 	try {
@@ -36,27 +37,20 @@ export function checkOwnKeys(keys: string[], object: object) {
 	});
 }
 
-function randomInteger(min: number, max: number) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-export function random_string(n: number): string {
+export async function randomString(n: number): Promise<string> {
 	// A n length string taking characters from lower_case, upper_case and digits
 	var result = '';
-	var characters =
+	const characters =
 		'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz';
+	const rand = await randBytes(n);
 	for (var i = 0; i < n; i++) {
-		result += characters[Number(randomInteger(0, characters.length - 1))];
+		result += characters[rand[i]! % characters.length];
 	}
 	return result;
 }
 
-export function randomPairingId(): string {
-	return random_string(19);
-}
-
-export function random_session_id(): string {
-	return random_string(19);
+export function randomPairingId(): Promise<string> {
+	return randomString(19);
 }
 
 // Will give a pause of 'ms' milliseconds in an async block. Always call with await
