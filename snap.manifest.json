@@ -1,5 +1,5 @@
 {
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Silent Shard creates a distributed self-custody account in MetaMask by generating a Distributed Private key between the browser extension and the Silent Shard mobile app using Multi-Party Computation (MPC). Thereby enabling a seamless 2FA experience for secure transactions.",
   "proposedName": "Silent Shard",
   "repository": {
@@ -7,7 +7,7 @@
     "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
   },
   "source": {
-    "shasum": "iSXTITUje7JnzckNxyV+1bEWal0Cee4x8Pj77ry4P9U=",
+    "shasum": "HCOp9b2PGeUPCpEthvGWnn2jnKPYYf6nZnBc8KXVwuc=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
