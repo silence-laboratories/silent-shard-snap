@@ -2,6 +2,7 @@ import { SnapError, SnapErrorCode } from '../error';
 import { JsonTx } from '@ethereumjs/tx';
 import type { Json } from '@metamask/utils';
 import { randBytes } from '@silencelaboratories/ecdsa-tss';
+import _sodium from 'libsodium-wrappers';
 
 export const fromHexStringToBytes = (hexString: string) => {
 	try {
@@ -42,9 +43,9 @@ export async function randomString(n: number): Promise<string> {
 	var result = '';
 	const characters =
 		'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz';
-	const rand = await randBytes(n);
+	await _sodium.ready;
 	for (var i = 0; i < n; i++) {
-		result += characters[rand[i]! % characters.length];
+		result += characters[_sodium.randombytes_uniform(characters.length)];
 	}
 	return result;
 }
