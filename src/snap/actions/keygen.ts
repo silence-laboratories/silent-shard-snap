@@ -2,10 +2,17 @@
 // This software is licensed under the Silence Laboratories License Agreement.
 
 import {
-	IP1KeyShare,
-	P1KeyGen,
-	randBytes,
-} from '@silencelaboratories/ecdsa-tss';
+	P1Keygen,
+	P1KeyshareV2,
+	generatePartyKeys,
+} from '@silencelaboratories/two-party-ecdsa-js';
+
+// import {
+// 	IP1KeyShare,
+// 	P1KeyGen,
+// 	randBytes,
+// } from '@silencelaboratories/ecdsa-tss';
+
 import * as utils from '../utils';
 import { KeygenConversation, PairingData } from '../../types';
 import { sendMessage } from '../../firebaseApi';
@@ -16,7 +23,7 @@ let running = false;
 
 type KeygenResult = {
 	publicKey: string;
-	keyShareData: IP1KeyShare;
+	keyShareData: P1KeyshareV2;
 	elapsedTime: number;
 };
 
@@ -35,10 +42,12 @@ export const keygen = async (
 		running = true;
 
 		const startTime = Date.now();
-		const sessionId = _sodium.to_hex(await randBytes(32));
+		// const sessionId = _sodium.to_hex(await randBytes(32));
 		const accountId = accountIdNumber;
-		const p1 = new P1KeyGen(sessionId, x1);
-		await p1.init();
+		// const p1 = new P1KeyGen(sessionId, x1);
+		// await p1.init();
+		const keys = await generatePartyKeys();
+		const p1 = await P1Keygen.init(keys);
 
 		let round = 1;
 
@@ -50,11 +59,10 @@ export const keygen = async (
 				party: 1,
 				round,
 			},
-			sessionId,
 			isApproved: null,
 		};
 
-		let keyshare: IP1KeyShare | null = null;
+		let keyshare: P1KeyshareV2 | null = null;
 		let expectResponse = true;
 		await _sodium.ready;
 		while (keyshare === null) {
@@ -74,28 +82,39 @@ export const keygen = async (
 					),
 				);
 			}
-			const decodedMessage = decryptedMessage
-				? utils.b64ToString(decryptedMessage)
-				: null;
-			const msg = await p1
-				.processMessage(decodedMessage)
-				.catch((error) => {
+
+
+			let msg;
+			if (!decryptedMessage) {
+				msg = await p1.genMsg1().catch((error) => {
 					throw new SnapError(
 						`Internal library error: ${error}`,
 						SnapErrorCode.InternalLibError,
 					);
 				});
-			if (msg.p1_key_share) {
-				keyshare = msg.p1_key_share;
-				expectResponse = false;
+			} else {
+				const decodedMessage = utils.b64ToString(decryptedMessage)
+				const keygenMsg2 = JSON.parse(decodedMessage);
+				const [p1Keyshare, round2Msg] = await p1.processMsg2(keygenMsg2).catch((error) => {
+					throw new SnapError(
+						`Internal library error: ${error}`,
+						SnapErrorCode.InternalLibError,
+					);
+				})
+				msg = round2Msg;
+				if (p1Keyshare) {
+					keyshare = p1Keyshare;
+					expectResponse = false;
+				}
 			}
+			
 			const nonce = _sodium.randombytes_buf(
 				_sodium.crypto_box_NONCEBYTES,
 			);
 			const encMessage = utils.Uint8ArrayTob64(
 				_sodium.crypto_box_easy(
 					_sodium.to_base64(
-						msg.msg_to_send,
+						JSON.stringify(msg),
 						base64_variants.ORIGINAL,
 					),
 					nonce,
@@ -133,7 +152,7 @@ export const keygen = async (
 		running = false;
 
 		return {
-			publicKey: keyshare.public_key,
+			publicKey: keyshare.data.root_public_key.point,
 			keyShareData: keyshare,
 			elapsedTime: Date.now() - startTime,
 		};

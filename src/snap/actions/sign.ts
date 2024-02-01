@@ -2,10 +2,12 @@
 // This software is licensed under the Silence Laboratories License Agreement.
 
 import {
-	IP1KeyShare,
-	P1Signature,
-	randBytes,
-} from '@silencelaboratories/ecdsa-tss';
+	P1Signer,
+	P1KeyshareV2,
+	generatePartyKeys,
+	
+} from '@silencelaboratories/two-party-ecdsa-js';
+
 import * as utils from '../utils';
 import { sendMessage } from '../../firebaseApi';
 import { PairingData, SignConversation, SignMetadata } from '../../types';
@@ -22,7 +24,7 @@ type SignResult = {
 
 export const sign = async (
 	pairingData: PairingData,
-	keyShare: IP1KeyShare,
+	keyShare: P1KeyshareV2,
 	hashAlg: string,
 	message: string,
 	messageHash: Uint8Array,
@@ -38,11 +40,10 @@ export const sign = async (
 		}
 		running = true;
 		let startTime = Date.now();
-		const sessionId = _sodium.to_hex(await randBytes(32));
+		// const sessionId = _sodium.to_hex(await randBytes(32));
 
-		let p1KeyShareObj = keyShare;
 		let round = 1;
-		const p1 = new P1Signature(sessionId, messageHash, p1KeyShareObj);
+		const p1 = await P1Signer.init(keyShare, messageHash, "m");
 
 		let signConversation: SignConversation = {
 			signMetadata,
@@ -53,9 +54,8 @@ export const sign = async (
 				party: 1,
 				round: round,
 			},
-			sessionId,
 			hashAlg: hashAlg,
-			publicKey: keyShare.public_key,
+			publicKey: keyShare.data.root_public_key.point,
 			signMessage: message,
 			messageHash: utils.toHexString(messageHash),
 			isApproved: null,
@@ -80,30 +80,40 @@ export const sign = async (
 					),
 				);
 			}
-			const decodedMessage = decryptedMessage
-				? utils.b64ToString(decryptedMessage)
-				: null;
-
-			const msg = await p1
-				.processMessage(decodedMessage)
-				.catch((error) => {
+			let msg;
+			if (!decryptedMessage) {
+				msg = await p1.genMsg1().catch((error) => {
 					throw new SnapError(
 						`Internal library error: ${error}`,
 						SnapErrorCode.InternalLibError,
 					);
 				});
-			if (msg.signature && msg.recid !== undefined) {
-				sign = msg.signature;
-				recId = msg.recid;
-				expectResponse = false;
+			} else {
+				const decodedMessage = utils.b64ToString(decryptedMessage)
+				const keygenMsg2 = JSON.parse(decodedMessage);
+				const [signWithRecId, round2Msg] = await p1.processMsg2(keygenMsg2).catch((error) => {
+					throw new SnapError(
+						`Internal library error: ${error}`,
+						SnapErrorCode.InternalLibError,
+					);
+				})
+				msg = round2Msg;
+				if (signWithRecId.sign && signWithRecId.recid !== undefined) {
+					sign = signWithRecId.sign;
+					recId = signWithRecId.recid;
+					expectResponse = false;
+				}
 			}
+
+			
+			
 			const nonce = _sodium.randombytes_buf(
 				_sodium.crypto_box_NONCEBYTES,
 			);
 			const encMessage = utils.Uint8ArrayTob64(
 				_sodium.crypto_box_easy(
 					_sodium.to_base64(
-						msg.msg_to_send,
+						JSON.stringify(msg),
 						base64_variants.ORIGINAL,
 					),
 					nonce,
