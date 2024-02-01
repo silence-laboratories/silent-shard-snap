@@ -16,7 +16,6 @@ export interface KeygenConversation {
 	expiry: number;
 	isApproved: boolean | null;
 	accountId: number;
-	sessionId: string;
 	message: Message;
 }
 
@@ -41,7 +40,6 @@ export interface SignConversation {
 	messageHash: string;
 	signMetadata: SignMetadata;
 	publicKey: string;
-	sessionId: string;
 	message: Message;
 }
 
@@ -68,7 +66,7 @@ export interface PairingData {
 export interface DistributedKey {
 	accountId: number;
 	publicKey: string;
-	keyShareData: IP1KeyShare;
+	keyShareData: P1KeyshareV2;
 }
 
 export type Wallet = {
