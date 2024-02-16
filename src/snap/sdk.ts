@@ -13,43 +13,22 @@ import { v4 as uuid } from 'uuid';
 
 const TOKEN_LIFE_TIME = 60000;
 
-const isPaired = async (): Promise<
-	| {
-			isPaired: true;
-			deviceName: string;
-			currentAccount: string;
-			newAccount: string | null;
-	  }
-	| { isPaired: false }
-> => {
+async function isPaired() {
 	try {
 		let silentShareStorage = await getSilentShareStorage();
-
-		const pairingData = silentShareStorage.pairingData;
-
-		const deviceName = pairingData.deviceName;
-
-		const wallets = Object.values(silentShareStorage.wallets);
-		const currentAccount = wallets.length > 0 ? wallets[0] : null;
-
-		const newDistributedKey =
-			silentShareStorage.newPairingState?.distributedKey;
-		const newAccount = newDistributedKey
-			? getAddressFromDistributedKey(newDistributedKey)
-			: null;
-
+		const deviceName = silentShareStorage.pairingData.deviceName;
 		return {
 			isPaired: true,
 			deviceName,
-			currentAccount: '',
-			newAccount,
+			isAccountExist: false,
 		};
 	} catch {
 		return {
 			isPaired: false,
+			deviceName: null,
 		};
 	}
-};
+}
 
 async function unpair() {
 	await deleteStorage();
@@ -81,7 +60,6 @@ async function runPairing() {
 
 async function runRePairing() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
-	const pairingData = silentShareStorage.pairingData;
 
 	const wallets = Object.values(silentShareStorage.wallets);
 	const currentAccount = wallets.length > 0 ? wallets[0] : null;
@@ -96,7 +74,9 @@ async function runRePairing() {
 	const distributedKey = result.newPairingState.distributedKey;
 	return {
 		pairingStatus: 'paired',
-		currentAccountAddress,
+		currentAccountAddress: currentAccountAddress
+			? [currentAccountAddress]
+			: [],
 		newAccountAddress: distributedKey
 			? getAddressFromDistributedKey(distributedKey)
 			: null,
