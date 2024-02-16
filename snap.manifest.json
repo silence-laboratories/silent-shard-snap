@@ -7,7 +7,7 @@
     "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
   },
   "source": {
-    "shasum": "HCOp9b2PGeUPCpEthvGWnn2jnKPYYf6nZnBc8KXVwuc=",
+    "shasum": "xdV1OnjSeTaC7PbRrCYa96XUu2YUcsmHYgNehMosp5M=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
@@ -20,6 +20,7 @@
   "initialPermissions": {
     "endowment:keyring": {
       "allowedOrigins": [
+        "http://localhost:3000",
         "https://snap.silencelaboratories.com",
         "https://snap-staging.silencelaboratories.com"
       ]
@@ -30,6 +31,7 @@
     "endowment:network-access": {},
     "endowment:rpc": {
       "allowedOrigins": [
+        "http://localhost:3000",
         "https://snap.silencelaboratories.com",
         "https://snap-staging.silencelaboratories.com"
       ]

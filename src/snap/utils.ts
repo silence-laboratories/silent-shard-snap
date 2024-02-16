@@ -2,7 +2,9 @@ import { SnapError, SnapErrorCode } from '../error';
 import { JsonTx } from '@ethereumjs/tx';
 import type { Json } from '@metamask/utils';
 import { randBytes } from '@silencelaboratories/ecdsa-tss';
+import { pubToAddress } from 'ethereumjs-util';
 import _sodium from 'libsodium-wrappers';
+import { DistributedKey } from '../types';
 
 export const fromHexStringToBytes = (hexString: string) => {
 	try {
@@ -107,4 +109,13 @@ export function serializeTransaction(tx: JsonTx, type: number): Json {
  */
 export function isEvmChain(caip2ChainId: string): boolean {
 	return caip2ChainId.startsWith('eip155:');
+}
+
+export function getAddressFromDistributedKey(distributedKey: DistributedKey) {
+	return (
+		'0x' +
+		pubToAddress(Buffer.from(distributedKey.publicKey, 'hex')).toString(
+			'hex',
+		)
+	);
 }

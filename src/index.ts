@@ -105,20 +105,18 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 */
 		case 'tss_runPairing':
 			const pairingRes = await sdk.runPairing();
-			if (pairingRes.usedBackupData && pairingRes.tempDistributedKey) {
-				return {
-					deviceName: pairingRes.deviceName,
-					address:
-						'0x' +
-						pubToAddress(
-							Buffer.from(
-								pairingRes.tempDistributedKey.publicKey,
-								'hex',
-							),
-						).toString('hex'), // pairingRes.temp_distributed_key.account_id,
-				};
-			}
-			return { address: null, deviceName: pairingRes.deviceName };
+			return {
+				address: pairingRes.newAccountAddress,
+				deviceName: pairingRes.deviceName,
+			};
+
+		case 'tss_runRePairing':
+			const repairingRes = await sdk.runRePairing();
+			return {
+				currentAccountAddress: repairingRes.currentAccountAddress,
+				newAccountAddress: repairingRes.newAccountAddress,
+				deviceName: repairingRes.deviceName,
+			};
 
 		/**
 		 * tss_runKeygen
@@ -140,31 +138,15 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 */
 		case 'tss_runKeygen':
 			let silentShareStorage: StorageData = await getSilentShareStorage();
-			if (silentShareStorage.tempDistributedKey) {
-				return {
-					address:
-						'0x' +
-						pubToAddress(
-							Buffer.from(
-								silentShareStorage.tempDistributedKey.publicKey,
-								'hex',
-							),
-						).toString('hex'),
-				};
-			} else {
-				const keygenRes = await sdk.runKeygen();
-				await sdk.runBackup();
-				return {
-					address:
-						'0x' +
-						pubToAddress(
-							Buffer.from(
-								keygenRes.distributedKey.publicKey,
-								'hex',
-							),
-						).toString('hex'),
-				};
-			}
+			const keygenRes = await sdk.runKeygen();
+			await sdk.runBackup();
+			return {
+				address:
+					'0x' +
+					pubToAddress(
+						Buffer.from(keygenRes.distributedKey.publicKey, 'hex'),
+					).toString('hex'),
+			};
 
 		/**
 		 * tss_snapVersion
