@@ -157,7 +157,19 @@ export class SimpleKeyring implements Keyring {
 	async deleteAccount(id: string): Promise<void> {
 		await this.#emitEvent(KeyringEvent.AccountDeleted, { id });
 		delete this.#wallets[id];
-		await this.#saveState();
+		let silentShareStorage: StorageData = await getSilentShareStorage();
+		if (
+			silentShareStorage.newPairingState?.pairingData &&
+			silentShareStorage.newPairingState?.pairingData?.pairingId !==
+				silentShareStorage.pairingData.pairingId
+		)
+			await saveSilentShareStorage({
+				...silentShareStorage,
+				pairingData: silentShareStorage.newPairingState.pairingData,
+				wallets: this.#wallets,
+				requests: this.#requests,
+			});
+		else deleteStorage();
 	}
 
 	async listRequests(): Promise<KeyringRequest[]> {

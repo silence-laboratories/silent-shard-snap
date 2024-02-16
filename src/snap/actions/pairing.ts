@@ -128,11 +128,10 @@ export const getToken = async (currentAccountAddress?: string) => {
 				isPaired: false,
 				pairingFailureReason: 'NO_BACKUP_DATA_WHILE_REPAIRING',
 			});
-		}
-
-		await updatePairingObject(data.token, pairingDataInit.pairingId, {
-			isPaired: true,
-		});
+		} else
+			await updatePairingObject(data.token, pairingDataInit.pairingId, {
+				isPaired: true,
+			});
 
 		const pairingData: PairingData = {
 			pairingId: pairingDataInit.pairingId,

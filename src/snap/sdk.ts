@@ -60,12 +60,14 @@ async function runPairing() {
 
 async function runRePairing() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
-
 	const wallets = Object.values(silentShareStorage.wallets);
 	const currentAccount = wallets.length > 0 ? wallets[0] : null;
-	const currentAccountAddress = currentAccount?.distributedKey
-		? getAddressFromDistributedKey(currentAccount?.distributedKey)
-		: undefined;
+	if (!currentAccount) {
+		throw new SnapError('Not Paired', SnapErrorCode.NotPaired);
+	}
+	const currentAccountAddress = getAddressFromDistributedKey(
+		currentAccount?.distributedKey,
+	);
 	let result = await PairingAction.getToken(currentAccountAddress);
 	await saveSilentShareStorage({
 		...silentShareStorage,
