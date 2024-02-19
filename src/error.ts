@@ -1,3 +1,6 @@
+// Copyright (c) Silence Laboratories Pte. Ltd.
+// This software is licensed under the Silence Laboratories License Agreement.
+
 export class SnapError extends Error {
 	code: number;
 	constructor(message: string, code: SnapErrorCode) {
