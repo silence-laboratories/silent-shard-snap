@@ -13,10 +13,10 @@ import { snapVersion } from './firebaseApi';
 import { PERMISSIONS } from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
 import { StorageData } from './types';
+import { version as SNAP_VERSION } from './../package.json';
 window.Buffer = window.Buffer || Buffer;
 
 let keyring: SimpleKeyring;
-const SNAP_VERSION = '1.2.6';
 
 const showConfirmationMessage = async (
 	prompt: string,
