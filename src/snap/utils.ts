@@ -1,3 +1,6 @@
+// Copyright (c) Silence Laboratories Pte. Ltd.
+// This software is licensed under the Silence Laboratories License Agreement.
+
 import { SnapError, SnapErrorCode } from '../error';
 import { JsonTx } from '@ethereumjs/tx';
 import type { Json } from '@metamask/utils';

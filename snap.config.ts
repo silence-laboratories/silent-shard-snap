@@ -1,3 +1,6 @@
+// Copyright (c) Silence Laboratories Pte. Ltd.
+// This software is licensed under the Silence Laboratories License Agreement.
+
 import type { SnapConfig } from '@metamask/snaps-cli';
 
 const config: SnapConfig = {

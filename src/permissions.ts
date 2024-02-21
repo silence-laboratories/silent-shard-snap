@@ -1,3 +1,6 @@
+// Copyright (c) Silence Laboratories Pte. Ltd.
+// This software is licensed under the Silence Laboratories License Agreement.
+
 import { KeyringRpcMethod } from '@metamask/keyring-api';
 
 export enum InternalMethod {
