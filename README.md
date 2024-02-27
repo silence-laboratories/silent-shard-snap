@@ -9,9 +9,6 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 ## How to run
 
 -   Use node version 18 or greater.
--   Need NPM_TOKEN to install the libraries, you can get that from your POC
--   Create .npmrc in root folder
--   Paste the following in the .npmrc file `//registry.npmjs.org/:_authToken=<NPM_TOKEN>`
 -   Now run, `yarn install`, to install the libraries
 -   Run, `yarn start` to run snap on local environment. This also have fast refresh so no need to build snap again after changes.
 
