@@ -20,7 +20,12 @@ async function isPaired() {
 		return {
 			isPaired: true,
 			deviceName,
-			isAccountExist: false,
+			// Avoid chaning this, have some legacy reference
+			isAccountExist:
+				silentShareStorage.pairingData.pairingId ===
+					silentShareStorage.newPairingState?.pairingData
+						?.pairingId &&
+				silentShareStorage.newPairingState?.distributedKey,
 		};
 	} catch {
 		return {

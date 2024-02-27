@@ -5,7 +5,7 @@ import {
 	sendMessage,
 } from '../../firebaseApi';
 import _sodium from 'libsodium-wrappers';
-import { DistributedKey, PairingData, StorageData, Wallet } from '../../types';
+import { DistributedKey, PairingData } from '../../types';
 import { SnapError, SnapErrorCode } from '../../error';
 import { decMessage } from '../entropy';
 import { v4 as uuid } from 'uuid';
@@ -77,7 +77,11 @@ const getDistributedKeyFromBackupData = async (
 			throw error;
 		} else if (error instanceof Error) {
 			throw new SnapError(error.message, SnapErrorCode.InvalidBackupData);
-		} else throw new SnapError('unknown-error', SnapErrorCode.UnknownError);
+		} else
+			throw new SnapError(
+				'wrong secret key for the given ciphertext',
+				SnapErrorCode.InvalidBackupData,
+			);
 	}
 };
 
@@ -117,6 +121,7 @@ export const getToken = async (currentAccountAddress?: string) => {
 					pairingDataInit.pairingId,
 					{
 						isPaired: false,
+						pairingFailureReason: 'INVALID_BACKUP_DATA',
 					},
 				);
 				throw error;
