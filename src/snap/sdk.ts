@@ -7,7 +7,7 @@ import * as KeyGenAction from './actions/keygen';
 import * as SignAction from './actions/sign';
 import * as Backup from './actions/backup';
 import { encMessage, requestEntropy } from './entropy';
-import { fromHexStringToBytes } from './utils';
+import { fromHexStringToBytes, getAddressFromDistributedKey } from './utils';
 import { saveSilentShareStorage, getSilentShareStorage } from './storage';
 import { SignMetadata, StorageData } from '../types';
 import { SnapError, SnapErrorCode } from '../error';
@@ -23,7 +23,12 @@ async function isPaired() {
 		return {
 			isPaired: true,
 			deviceName,
-			isAccountExist: !!silentShareStorage.tempDistributedKey,
+			// Avoid chaning this, have some legacy reference
+			isAccountExist:
+				silentShareStorage.pairingData.pairingId ===
+					silentShareStorage.newPairingState?.pairingData
+						?.pairingId &&
+				silentShareStorage.newPairingState?.distributedKey,
 		};
 	} catch {
 		return {
@@ -44,13 +49,49 @@ async function initPairing() {
 
 async function runPairing() {
 	let result = await PairingAction.getToken();
-	await saveSilentShareStorage(result.silentShareStorage);
+	await saveSilentShareStorage({
+		newPairingState: result.newPairingState,
+		pairingData: result.newPairingState.pairingData,
+		wallets: {},
+		requests: {},
+	});
+	const distributedKey = result.newPairingState.distributedKey;
 	return {
 		pairingStatus: 'paired',
+		newAccountAddress: distributedKey
+			? getAddressFromDistributedKey(distributedKey)
+			: null,
 		deviceName: result.deviceName,
 		elapsedTime: result.elapsedTime,
-		usedBackupData: result.usedBackupData,
-		tempDistributedKey: result.silentShareStorage.tempDistributedKey,
+	};
+}
+
+async function runRePairing() {
+	let silentShareStorage: StorageData = await getSilentShareStorage();
+	const wallets = Object.values(silentShareStorage.wallets);
+	const currentAccount = wallets.length > 0 ? wallets[0] : null;
+	if (!currentAccount) {
+		throw new SnapError('Not Paired', SnapErrorCode.NotPaired);
+	}
+	const currentAccountAddress = getAddressFromDistributedKey(
+		currentAccount?.distributedKey,
+	);
+	let result = await PairingAction.getToken(currentAccountAddress);
+	await saveSilentShareStorage({
+		...silentShareStorage,
+		newPairingState: result.newPairingState,
+	});
+	const distributedKey = result.newPairingState.distributedKey;
+	return {
+		pairingStatus: 'paired',
+		currentAccountAddress: currentAccountAddress
+			? [currentAccountAddress]
+			: [],
+		newAccountAddress: distributedKey
+			? getAddressFromDistributedKey(distributedKey)
+			: null,
+		deviceName: result.deviceName,
+		elapsedTime: result.elapsedTime,
 	};
 }
 
@@ -78,11 +119,14 @@ async function runKeygen() {
 	let result = await KeyGenAction.keygen(pairingData, accountId, x1);
 	saveSilentShareStorage({
 		...silentShareStorage,
-		accountId: uuid(),
-		tempDistributedKey: {
-			publicKey: result.publicKey,
-			accountId,
-			keyShareData: result.keyShareData,
+		newPairingState: {
+			pairingData: null,
+			accountId: uuid(),
+			distributedKey: {
+				publicKey: result.publicKey,
+				accountId,
+				keyShareData: result.keyShareData,
+			},
 		},
 	});
 	return {
@@ -98,7 +142,7 @@ async function runKeygen() {
 async function runBackup() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
 	const encryptedMessage = await encMessage(
-		JSON.stringify(silentShareStorage.tempDistributedKey),
+		JSON.stringify(silentShareStorage.newPairingState?.distributedKey),
 	);
 	let pairingData = silentShareStorage.pairingData;
 	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
@@ -154,4 +198,5 @@ export {
 	unpair,
 	isPaired,
 	refreshPairing,
+	runRePairing,
 };

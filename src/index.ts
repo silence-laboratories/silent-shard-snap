@@ -16,10 +16,10 @@ import { snapVersion } from './firebaseApi';
 import { PERMISSIONS } from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
 import { StorageData } from './types';
+import { version as SNAP_VERSION } from './../package.json';
 window.Buffer = window.Buffer || Buffer;
 
 let keyring: SimpleKeyring;
-const SNAP_VERSION = '1.2.6';
 
 const showConfirmationMessage = async (
 	prompt: string,
@@ -71,20 +71,24 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 2. UnknownError, when something unknown error occurs
 		 */
 		case 'tss_initPairing':
-			let initPairingRequest = await showConfirmationMessage(
-				`Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`,
-				[
-					'👉🏻 To get started, grab the companion app from either the Apple App Store or Google Play.',
-					`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
-					`Happy to have you onboard! 🥳`,
-				],
-			);
-
-			if (!initPairingRequest) {
-				throw new SnapError(
-					'Pairing is rejected.',
-					SnapErrorCode.RejectedPairingRequest,
+			const isRePair = (request.params as [{ isRePair: boolean }])[0]
+				.isRePair;
+			if (!isRePair) {
+				let initPairingRequest = await showConfirmationMessage(
+					`Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`,
+					[
+						'👉🏻 To get started, grab the companion Silent Shard app from either the Apple App Store or Google Play.',
+						`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
+						`Happy to have you onboard! 🥳`,
+					],
 				);
+
+				if (!initPairingRequest) {
+					throw new SnapError(
+						'Pairing is rejected.',
+						SnapErrorCode.RejectedPairingRequest,
+					);
+				}
 			}
 			const qrCodeMessage = await sdk.initPairing();
 			return {
@@ -101,27 +105,41 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 *
 		 * @throws
 		 * 1. PairingNotInitialized, when runPairing is called before the initPairing
-		 * 2. InvalidBackupData, when snap get invalid backup data,
+		 * 2. InvalidBackupData, when snap get invalid backup data, or wrong secret key for the given ciphertext
 		 * 3. StorageError, when snap fails to store data in MM snap state,
 		 * 4. FirebaseError, when error occurs on server side, message will contains info,
-		 * 5. UnknownError, when something unknown error occurs
+		 * 6. UnknownError, when something unknown error occurs
 		 */
 		case 'tss_runPairing':
 			const pairingRes = await sdk.runPairing();
-			if (pairingRes.usedBackupData && pairingRes.tempDistributedKey) {
-				return {
-					deviceName: pairingRes.deviceName,
-					address:
-						'0x' +
-						pubToAddress(
-							Buffer.from(
-								pairingRes.tempDistributedKey.publicKey,
-								'hex',
-							),
-						).toString('hex'), // pairingRes.temp_distributed_key.account_id,
-				};
-			}
-			return { address: null, deviceName: pairingRes.deviceName };
+			return {
+				address: pairingRes.newAccountAddress,
+				deviceName: pairingRes.deviceName,
+			};
+
+		/**
+		 * tss_runRePairing
+		 * @abstract This start pairing process with phone and fetch the auth token
+		 *
+		 * @returns
+		 * currentAccountAddress, return the array of current account addresses, array for future use
+		 * newAccountAddress, can be null, return the new account addess if we get from backup.
+		 * deviceName, the name of device it is re-paired to
+		 *
+		 * @throws
+		 * 1. PairingNotInitialized, when runPairing is called before the initPairing
+		 * 2. InvalidBackupData, when snap get invalid backup data, or wrong secret key for the given ciphertext
+		 * 3. StorageError, when snap fails to store data in MM snap state,
+		 * 4. FirebaseError, when error occurs on server side, message will contains info,
+		 * 6. UnknownError, when something unknown error occurs
+		 */
+		case 'tss_runRePairing':
+			const repairingRes = await sdk.runRePairing();
+			return {
+				currentAccountAddress: repairingRes.currentAccountAddress,
+				newAccountAddress: repairingRes.newAccountAddress,
+				deviceName: repairingRes.deviceName,
+			};
 
 		/**
 		 * tss_runKeygen
@@ -143,31 +161,15 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 */
 		case 'tss_runKeygen':
 			let silentShareStorage: StorageData = await getSilentShareStorage();
-			if (silentShareStorage.tempDistributedKey) {
-				return {
-					address:
-						'0x' +
-						pubToAddress(
-							Buffer.from(
-								silentShareStorage.tempDistributedKey.publicKey,
-								'hex',
-							),
-						).toString('hex'),
-				};
-			} else {
-				const keygenRes = await sdk.runKeygen();
-				await sdk.runBackup();
-				return {
-					address:
-						'0x' +
-						pubToAddress(
-							Buffer.from(
-								keygenRes.distributedKey.publicKey,
-								'hex',
-							),
-						).toString('hex'),
-				};
-			}
+			const keygenRes = await sdk.runKeygen();
+			await sdk.runBackup();
+			return {
+				address:
+					'0x' +
+					pubToAddress(
+						Buffer.from(keygenRes.distributedKey.publicKey, 'hex'),
+					).toString('hex'),
+			};
 
 		/**
 		 * tss_snapVersion

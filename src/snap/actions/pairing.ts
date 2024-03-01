@@ -8,7 +8,7 @@ import {
 	sendMessage,
 } from '../../firebaseApi';
 import _sodium from 'libsodium-wrappers';
-import { DistributedKey, PairingData, StorageData, Wallet } from '../../types';
+import { DistributedKey, PairingData } from '../../types';
 import { SnapError, SnapErrorCode } from '../../error';
 import { decMessage } from '../entropy';
 import { v4 as uuid } from 'uuid';
@@ -44,12 +44,51 @@ export const init = async () => {
 		return qrCode;
 	} catch (error) {
 		if (error instanceof Error) {
-			throw error;
+			throw new SnapError(error.message, SnapErrorCode.UnknownError);
 		} else throw new SnapError('unkown-error', SnapErrorCode.UnknownError);
 	}
 };
 
-export const getToken = async () => {
+const updatePairingObject = async (
+	token: string,
+	pairingId: string,
+	pairingObject:
+		| { isPaired: boolean }
+		| {
+				isPaired: boolean;
+				pairingFailureReason: string;
+		  },
+) => {
+	await sendMessage(token, 'pairing', pairingObject, false, pairingId);
+};
+
+const getDistributedKeyFromBackupData = async (
+	backupData: string,
+): Promise<{ distributedKey: DistributedKey; accountAddress: string }> => {
+	try {
+		const decreptedMessage = await decMessage(backupData);
+		const distributedKey = JSON.parse(
+			utils.uint8ArrayToUtf8String(decreptedMessage),
+		);
+		let accountAddress = utils.getAddressFromDistributedKey(distributedKey);
+		return {
+			distributedKey,
+			accountAddress,
+		};
+	} catch (error) {
+		if (error instanceof SnapError) {
+			throw error;
+		} else if (error instanceof Error) {
+			throw new SnapError(error.message, SnapErrorCode.InvalidBackupData);
+		} else
+			throw new SnapError(
+				'wrong secret key for the given ciphertext',
+				SnapErrorCode.InvalidBackupData,
+			);
+	}
+};
+
+export const getToken = async (currentAccountAddress?: string) => {
 	try {
 		if (!pairingDataInit) {
 			throw new SnapError(
@@ -69,56 +108,39 @@ export const getToken = async () => {
 			pairingDataInit.pairingId,
 			_sodium.to_hex(signature),
 		);
+
 		let tempDistributedKey: DistributedKey | null = null;
-		let usedBackupData = false;
+		let tempAccountAddress: string | null = null;
+
 		if (data.backupData) {
 			try {
-				const decreptedMessage = await decMessage(data.backupData);
-				tempDistributedKey = JSON.parse(
-					utils.uint8ArrayToUtf8String(decreptedMessage),
-				);
-				await sendMessage(
-					data.token,
-					'pairing',
-					{ isPaired: true },
-					false,
-					pairingDataInit.pairingId,
-				);
-				usedBackupData = true;
+				const { distributedKey, accountAddress } =
+					await getDistributedKeyFromBackupData(data.backupData);
+				tempDistributedKey = distributedKey;
+				tempAccountAddress = accountAddress;
 			} catch (error) {
-				try {
-					await sendMessage(
-						data.token,
-						'pairing',
-						{ isPaired: false },
-						false,
-						pairingDataInit.pairingId,
-					);
-				} catch (error) {
-					throw error;
-				}
-				if (error instanceof SnapError) {
-					throw error;
-				} else if (error instanceof Error) {
-					throw new SnapError(
-						error.message,
-						SnapErrorCode.InvalidBackupData,
-					);
-				} else
-					throw new SnapError(
-						'unknown-error',
-						SnapErrorCode.UnknownError,
-					);
+				await updatePairingObject(
+					data.token,
+					pairingDataInit.pairingId,
+					{
+						isPaired: false,
+						pairingFailureReason: 'INVALID_BACKUP_DATA',
+					},
+				);
+				throw error;
 			}
-		} else {
-			await sendMessage(
-				data.token,
-				'pairing',
-				{ isPaired: true },
-				false,
-				pairingDataInit.pairingId,
-			);
 		}
+
+		if (currentAccountAddress && tempAccountAddress == null) {
+			await updatePairingObject(data.token, pairingDataInit.pairingId, {
+				isPaired: false,
+				pairingFailureReason: 'NO_BACKUP_DATA_WHILE_REPAIRING',
+			});
+		} else
+			await updatePairingObject(data.token, pairingDataInit.pairingId, {
+				isPaired: true,
+			});
+
 		const pairingData: PairingData = {
 			pairingId: pairingDataInit.pairingId,
 			webEncPublicKey: _sodium.to_hex(pairingDataInit.encPair.publicKey),
@@ -138,16 +160,13 @@ export const getToken = async () => {
 		};
 
 		return {
-			silentShareStorage: {
+			newPairingState: {
 				pairingData,
-				wallets: {},
-				requests: {},
-				tempDistributedKey,
+				distributedKey: tempDistributedKey ?? null,
 				accountId: tempDistributedKey ? uuid() : null,
-			} as StorageData,
+			},
 			elapsedTime: Date.now() - startTime,
 			deviceName: data.deviceName,
-			usedBackupData,
 		};
 	} catch (error) {
 		if (error instanceof Error) {

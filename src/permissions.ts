@@ -10,6 +10,7 @@ export enum InternalMethod {
 	TssRunKeygen = 'tss_runKeygen',
 	TssUnPair = 'tss_unpair',
 	TssSnapVersion = 'tss_snapVersion',
+	TssRunRePairing = 'tss_runRePairing',
 }
 
 export enum SigningMethods {
@@ -93,6 +94,7 @@ export const PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssRunKeygen,
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
+			InternalMethod.TssRunRePairing,
 		],
 	],
 	[
@@ -108,6 +110,7 @@ export const PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssRunKeygen,
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
+			InternalMethod.TssRunRePairing,
 		],
 	],
 ]);
