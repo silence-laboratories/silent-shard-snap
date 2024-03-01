@@ -3,7 +3,7 @@
 
 import { SnapError, SnapErrorCode } from './error';
 
-const baseUrl = 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net';
+const baseUrl = 'https://us-central1-mobile-wallet-mm-snap-staging.cloudfunctions.net';
 
 interface Response {
 	response: any;
