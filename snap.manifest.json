@@ -20,7 +20,8 @@
   "initialPermissions": {
     "endowment:keyring": {
       "allowedOrigins": [
-        "https://snap-staging.silencelaboratories.com"
+        "https://snap-staging.silencelaboratories.com",
+        "http://localhost:3000"
       ]
     },
     "snap_dialog": {},
@@ -29,7 +30,8 @@
     "endowment:network-access": {},
     "endowment:rpc": {
       "allowedOrigins": [
-        "https://snap-staging.silencelaboratories.com"
+        "https://snap-staging.silencelaboratories.com",
+        "http://localhost:3000"
       ]
     },
     "snap_getEntropy": {},
