@@ -22,8 +22,10 @@
 		"snap.manifest.json"
 	],
 	"scripts": {
-		"build": "mm-snap build",
-		"build:clean": "yarn clean && yarn build",
+		"build:production": "mm-snap build -c ./snap.config.ts",
+		"build:staging": "mm-snap build -c ./snap.staging.config.ts",
+		"build:clean:production": "yarn clean && yarn build:production",
+		"build:clean:staging": "yarn clean && yarn build:staging",
 		"clean": "rimraf dist",
 		"lint": "yarn lint:eslint && yarn lint:misc && yarn lint:deps && yarn lint:types",
 		"lint:deps": "depcheck",
@@ -32,7 +34,7 @@
 		"lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' '!snap.manifest.json' --check",
 		"lint:types": "tsc --noEmit",
 		"serve": "mm-snap serve",
-		"start": "NODE_ENV='development' mm-snap watch"
+		"start": "NODE_ENV='development' mm-snap watch -c ./snap.staging.config.ts"
 	},
 	"dependencies": {
 		"@ethereumjs/common": "^3.1.2",
