@@ -52,12 +52,27 @@ export const PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssUnPair,
 			InternalMethod.TssRunRePairing,
 		],
-	],
-
+	]
 ]);
 
 /** THIS SHOULD BE USED FOR DEVELOPMENT ONLY */
 export const STAGING_PERMISSIONS = new Map<string, string[]>([
+	[
+		'https://snap-staging.silencelaboratories.com/',
+		[
+			KeyringRpcMethod.ListAccounts,
+			KeyringRpcMethod.GetAccount,
+			KeyringRpcMethod.CreateAccount,
+			KeyringRpcMethod.DeleteAccount,
+			InternalMethod.TssInitPairing,
+			InternalMethod.TssIsPaired,
+			InternalMethod.TssRunPairing,
+			InternalMethod.TssRunKeygen,
+			InternalMethod.TssSnapVersion,
+			InternalMethod.TssUnPair,
+			InternalMethod.TssRunRePairing,
+		],
+	],
 	[
 		'http://localhost:3000',
 		[
