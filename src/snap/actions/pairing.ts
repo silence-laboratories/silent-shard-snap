@@ -13,6 +13,12 @@ import { SnapError, SnapErrorCode } from '../../error';
 import { decMessage } from '../entropy';
 import { v4 as uuid } from 'uuid';
 
+export enum PairingRemark {
+	WALLET_MISMATCH = 'WALLET_MISMATCH',
+	NO_BACKUP_DATA_WHILE_REPAIRING = 'NO_BACKUP_DATA_WHILE_REPAIRING',
+	INVALID_BACKUP_DATA = 'INVALID_BACKUP_DATA',
+}
+
 export interface PairingDataInit {
 	pairingId: string;
 	encPair: _sodium.KeyPair;
@@ -56,7 +62,7 @@ const updatePairingObject = async (
 		| { isPaired: boolean }
 		| {
 				isPaired: boolean;
-				pairingFailureReason: string;
+				pairingRemark: string;
 		  },
 ) => {
 	await sendMessage(token, 'pairing', pairingObject, false, pairingId);
@@ -124,7 +130,7 @@ export const getToken = async (currentAccountAddress?: string) => {
 					pairingDataInit.pairingId,
 					{
 						isPaired: false,
-						pairingFailureReason: 'INVALID_BACKUP_DATA',
+						pairingRemark: PairingRemark.INVALID_BACKUP_DATA,
 					},
 				);
 				throw error;
@@ -134,7 +140,16 @@ export const getToken = async (currentAccountAddress?: string) => {
 		if (currentAccountAddress && tempAccountAddress == null) {
 			await updatePairingObject(data.token, pairingDataInit.pairingId, {
 				isPaired: false,
-				pairingFailureReason: 'NO_BACKUP_DATA_WHILE_REPAIRING',
+				pairingRemark: PairingRemark.NO_BACKUP_DATA_WHILE_REPAIRING,
+			});
+		} else if (
+			currentAccountAddress &&
+			tempAccountAddress &&
+			currentAccountAddress !== tempAccountAddress
+		) {
+			await updatePairingObject(data.token, pairingDataInit.pairingId, {
+				isPaired: true,
+				pairingRemark: PairingRemark.WALLET_MISMATCH,
 			});
 		} else
 			await updatePairingObject(data.token, pairingDataInit.pairingId, {
