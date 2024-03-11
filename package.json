@@ -22,12 +22,12 @@
     "snap.manifest.json"
   ],
   "scripts": {
-    "build:production": "mm-snap build -c ./snap.config.ts",
-    "build:staging": "mm-snap build -c ./snap.staging.config.ts",
-    "build:clean:production": "yarn clean && yarn build:production",
-    "build:clean:staging": "yarn clean && yarn build:staging",
-    "prepublish:production": "yarn build:clean:production && NODE_ENV='production' node ./scripts/pre-publish.js",
-    "prepublish:staging": "yarn build:clean:staging && NODE_ENV='staging' node ./scripts/pre-publish.js",
+    "build:prod": "mm-snap build -c ./snap.config.ts",
+    "build:stg": "mm-snap build -c ./snap.staging.config.ts",
+    "build:clean:prod": "yarn clean && yarn build:prod",
+    "build:clean:stg": "yarn clean && yarn build:stg",
+    "prepublish:prod": "yarn build:clean:prod && NODE_ENV='production' node ./scripts/pre-publish.js",
+    "prepublish:stg": "yarn build:clean:stg && NODE_ENV='staging' node ./scripts/pre-publish.js",
     "clean": "rimraf dist",
     "lint": "yarn lint:eslint && yarn lint:misc && yarn lint:deps && yarn lint:types",
     "lint:deps": "depcheck",

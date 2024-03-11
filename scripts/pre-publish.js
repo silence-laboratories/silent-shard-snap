@@ -14,12 +14,12 @@ const currentVersion = packageJson.version;
 
 // Check the environment
 if (execEnv === 'staging') {
-	console.log(`${chalk.green.bold('PREPUBLISH STAGING ANNOUNCEMENT')}`);
+	console.log(`${chalk.green.bold('PREPUBLISH STAGING ANNOUNCEMENT')}\u{1F447}\u{1F447}\u{1F447}`);
 	baseRepoUrl =
 		'https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap-staging';
 	name = '@silencelaboratories/silent-shard-snap-staging';
 } else if (execEnv === 'production') {
-	console.log(`${chalk.green.bold('PREPUBLISH PRODUCTION ANNOUNCEMENT')}`);
+	console.log(`${chalk.green.bold('PREPUBLISH PRODUCTION ANNOUNCEMENT')}\u{1F447}\u{1F447}\u{1F447}`);
 	baseRepoUrl =
 		'https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap';
 	name = '@silencelaboratories/silent-shard-snap';

@@ -14,8 +14,12 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 
 ## How to publish
 
--   Update the version of snap in following places before publishing snap `index.ts`, `package.json` and `snap.manifest.json`.
+### Pre-publish
+-   Run `prepublish:stg` or `prepublish:prod` to update correct metadata for `package.json`.
+-   Update the version of snap in `package.json`.
 -   Update the version in firebase function in `snapVersion.ts` file.
+
+### Publish
 -   To publish the snap run `npm publish`. You will need to login with valid npm account before deploying new version. If you encounter any issue, delete the .npmrc and try again.
 
 ## Debugging
