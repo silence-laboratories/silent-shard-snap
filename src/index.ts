@@ -13,7 +13,7 @@ import { SnapError, SnapErrorCode } from './error';
 import { handleKeyringRequest } from '@metamask/keyring-api';
 import { SimpleKeyring } from './snap/keyring';
 import { snapVersion } from './firebaseApi';
-import { PERMISSIONS } from './permissions';
+import { PERMISSIONS, STAGING_PERMISSIONS } from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
 import { StorageData } from './types';
 import { version as SNAP_VERSION } from './../package.json';
@@ -39,7 +39,13 @@ const showConfirmationMessage = async (
 };
 
 const hasPermission = (origin: string, method: string): boolean => {
-	return Boolean(PERMISSIONS.get(origin)?.includes(method));
+	if (process.env.IS_PRODUCTION) {
+		return Boolean(PERMISSIONS.get(origin)?.includes(method));
+	}
+	return (
+		Boolean(PERMISSIONS.get(origin)?.includes(method)) ||
+		Boolean(STAGING_PERMISSIONS.get(origin)?.includes(method))
+	);
 };
 
 export const onRpcRequest: OnRpcRequestHandler = async ({
