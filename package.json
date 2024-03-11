@@ -1,6 +1,6 @@
 {
 	"name": "@silencelaboratories/silent-shard-snap-staging",
-	"version": "1.2.7-alpha.1",
+	"version": "1.2.7-alpha.2",
 	"author": "Silence Laboratories",
 	"license": "SEE LICENSE IN LICENSE.md",
 	"description": "Distributed wallet between Metamask plugin and SilentShard mobile app",

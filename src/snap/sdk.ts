@@ -76,20 +76,32 @@ async function runRePairing() {
 	const currentAccountAddress = getAddressFromDistributedKey(
 		currentAccount?.distributedKey,
 	);
+
 	let result = await PairingAction.getToken(currentAccountAddress);
-	await saveSilentShareStorage({
-		...silentShareStorage,
-		newPairingState: result.newPairingState,
-	});
+
 	const distributedKey = result.newPairingState.distributedKey;
+	const newAccountAddress = distributedKey
+		? getAddressFromDistributedKey(distributedKey)
+		: null;
+
+	if (newAccountAddress === currentAccountAddress) {
+		await saveSilentShareStorage({
+			...silentShareStorage,
+			pairingData: result.newPairingState.pairingData,
+		});
+	} else {
+		await saveSilentShareStorage({
+			...silentShareStorage,
+			newPairingState: result.newPairingState,
+		});
+	}
+
 	return {
 		pairingStatus: 'paired',
 		currentAccountAddress: currentAccountAddress
 			? [currentAccountAddress]
 			: [],
-		newAccountAddress: distributedKey
-			? getAddressFromDistributedKey(distributedKey)
-			: null,
+		newAccountAddress,
 		deviceName: result.deviceName,
 		elapsedTime: result.elapsedTime,
 	};
