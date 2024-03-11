@@ -6,11 +6,14 @@ const fs = require('fs');
 
 // Read the package.json file
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const snapManifestJson = JSON.parse(fs.readFileSync('snap.manifest.json', 'utf8'));
 
 const execEnv = process.env.NODE_ENV;
+const currentVersion = packageJson.version;
 let baseRepoUrl = '';
 let name = '';
-const currentVersion = packageJson.version;
+let rpcOrigins = [];
+let keyringOrigins = [];
 
 // Check the environment
 if (execEnv === 'staging') {
@@ -18,11 +21,15 @@ if (execEnv === 'staging') {
 	baseRepoUrl =
 		'https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap-staging';
 	name = '@silencelaboratories/silent-shard-snap-staging';
+    rpcOrigins = ["https://snap-staging.silencelaboratories.com", "http://localhost:3000"];
+    keyringOrigins = ["https://snap-staging.silencelaboratories.com", "http://localhost:3000"];
 } else if (execEnv === 'production') {
 	console.log(`${chalk.green.bold('PREPUBLISH PRODUCTION ANNOUNCEMENT')}\u{1F447}\u{1F447}\u{1F447}`);
 	baseRepoUrl =
 		'https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap';
 	name = '@silencelaboratories/silent-shard-snap';
+    rpcOrigins = ["https://snap.silencelaboratories.com"];
+    keyringOrigins = ["https://snap.silencelaboratories.com"];
 } else {
 	console.log(chalk.red(`Invalid environment: ${execEnv}`));
 	throw new Error('Invalid environment');
@@ -37,10 +44,18 @@ const announcement = chalk.black.italic(
 	)} in the ${chalk.yellow('package.json')}.`,
 );
 console.log(announcement);
-// Override the fields
+
+// Override package.json fields
 packageJson.name = name;
 packageJson.repository.url = baseRepoUrl;
 packageJson.homepage = baseRepoUrl;
 
+// Override snap.manifest.json fields
+snapManifestJson.initialPermissions['endowment:rpc'].allowedOrigins = rpcOrigins;
+snapManifestJson.initialPermissions['endowment:keyring'].allowedOrigins = keyringOrigins;
+
 // Write the package.json file
 fs.writeFileSync('package.json', JSON.stringify(packageJson, null, 2), 'utf8');
+
+// Write the snap.manifest.json file
+fs.writeFileSync('snap.manifest.json', JSON.stringify(snapManifestJson, null, 2), 'utf8');
