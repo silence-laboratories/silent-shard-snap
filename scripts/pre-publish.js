@@ -34,7 +34,7 @@ if (execEnv === 'staging') {
 	console.log(chalk.red(`Invalid environment: ${execEnv}`));
 	throw new Error('Invalid environment');
 }
-const announcement = chalk.black.italic(
+const announcement = chalk.italic(
 	`We will publish new version of ${chalk.yellow(
 		name,
 	)} ${chalk.cyan.bold(
