@@ -1,3 +1,6 @@
+// Copyright (c) Silence Laboratories Pte. Ltd.
+// This software is licensed under the Silence Laboratories License Agreement.
+
 const { promises: fs } = require('fs');
 const path = require('path');
 const mkdirp = require('mkdirp');

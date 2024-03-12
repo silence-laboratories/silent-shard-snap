@@ -12,10 +12,19 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 -   Now run, `yarn install`, to install the libraries
 -   Run, `yarn start` to run snap on local environment. This also have fast refresh so no need to build snap again after changes.
 
+## How to build
+
+- Run `yarn build` or `yarn build:prod` for build production Snap
+- Run `yarn build:stg` for build staging Snap
+
 ## How to publish
 
--   Update the version of snap in following places before publishing snap `index.ts`, `package.json` and `snap.manifest.json`.
+### Pre-publish
+-   Run `yarn prepublish:stg` or `yarn prepublish:prod` to update correct metadata for `package.json` and bundle the Snap with right `snap.config` file.
+-   Update the version of snap in `package.json`.
 -   Update the version in firebase function in `snapVersion.ts` file.
+
+### Publish
 -   To publish the snap run `npm publish`. You will need to login with valid npm account before deploying new version. If you encounter any issue, delete the .npmrc and try again.
 
 ## Debugging
