@@ -28,7 +28,7 @@
 		"build:clean:prod": "yarn clean && yarn build:prod",
 		"build:clean:stg": "yarn clean && yarn build:stg",
 		"prepublish:prod": "NODE_ENV='production' node ./scripts/pre-publish.js && yarn install && yarn build:clean:prod",
-		" // ignore:void_checks": "NODE_ENV='staging' node ./scripts/pre-publish.js && yarn install && yarn build:clean:stg",
+		"prepublish:stg": "NODE_ENV='staging' node ./scripts/pre-publish.js && yarn install && yarn build:clean:stg",
 		"clean": "rimraf dist",
 		"lint": "yarn lint:eslint && yarn lint:misc && yarn lint:deps && yarn lint:types",
 		"lint:deps": "depcheck",
