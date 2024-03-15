@@ -83,6 +83,9 @@ export type KeyringState = {
 
 export type StorageData = KeyringState & {
 	pairingData: PairingData;
-	accountId: string | null;
-	tempDistributedKey: DistributedKey | null;
+	newPairingState?: {
+		pairingData: PairingData | null;
+		distributedKey: DistributedKey | null;
+		accountId: string | null;
+	};
 };

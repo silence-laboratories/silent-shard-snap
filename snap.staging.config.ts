@@ -14,8 +14,8 @@ const config: SnapConfig = {
 		path: true,
 	},
 	environment: {
-		IS_PRODUCTION: true,
-	},
+        IS_PRODUCTION: false,
+    },
 	stats: {
 		builtIns: {
 			// The following builtins can be ignored. They are used by some of the
