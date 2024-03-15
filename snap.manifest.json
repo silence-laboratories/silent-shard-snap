@@ -1,18 +1,18 @@
 {
-  "version": "1.2.7-alpha.2",
+  "version": "1.2.7",
   "description": "Silent Shard creates a distributed self-custody account in MetaMask by generating a Distributed Private key between the browser extension and the Silent Shard mobile app using Multi-Party Computation (MPC). Thereby enabling a seamless 2FA experience for secure transactions.",
   "proposedName": "Silent Shard",
   "repository": {
     "type": "git",
-    "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap-staging"
+    "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
   },
   "source": {
-    "shasum": "pP/9FnA2VR2IJLDqrG43sxZ8oV8zBvRjxFrF3KfSDwA=",
+    "shasum": "bd5tmu9Sv/fpDgnscelkU5yjYWO63gLEj7iFCWrXa68=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
         "iconPath": "images/silentShardLogo.svg",
-        "packageName": "@silencelaboratories/silent-shard-snap-staging",
+        "packageName": "@silencelaboratories/silent-shard-snap",
         "registry": "https://registry.npmjs.org/"
       }
     }
@@ -20,8 +20,7 @@
   "initialPermissions": {
     "endowment:keyring": {
       "allowedOrigins": [
-        "https://snap-staging.silencelaboratories.com",
-        "http://localhost:3000"
+        "https://snap.silencelaboratories.com"
       ]
     },
     "snap_dialog": {},
@@ -30,8 +29,7 @@
     "endowment:network-access": {},
     "endowment:rpc": {
       "allowedOrigins": [
-        "https://snap-staging.silencelaboratories.com",
-        "http://localhost:3000"
+        "https://snap.silencelaboratories.com"
       ]
     },
     "snap_getEntropy": {},

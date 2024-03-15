@@ -2598,9 +2598,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@silencelaboratories/silent-shard-snap-staging@workspace:.":
+"@silencelaboratories/silent-shard-snap@workspace:.":
   version: 0.0.0-use.local
-  resolution: "@silencelaboratories/silent-shard-snap-staging@workspace:."
+  resolution: "@silencelaboratories/silent-shard-snap@workspace:."
   dependencies:
     "@ethereumjs/common": ^3.1.2
     "@ethereumjs/tx": ^4.1.2
