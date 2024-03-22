@@ -2,6 +2,7 @@
 // This software is licensed under the Silence Laboratories License Agreement.
 
 import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
+import { P1KeyshareDataV2 } from '@silencelaboratories/two-party-ecdsa-js';
 import { KeyringAccount, KeyringRequest } from '@metamask/keyring-api';
 
 export interface Message {
@@ -17,6 +18,7 @@ export interface KeygenConversation {
 	isApproved: boolean | null;
 	accountId: number;
 	message: Message;
+	sessionId: string;
 }
 
 export type SignMetadata =
@@ -41,6 +43,7 @@ export interface SignConversation {
 	signMetadata: SignMetadata;
 	publicKey: string;
 	message: Message;
+	sessionId: string;
 }
 
 export interface BackupConversation {
@@ -66,7 +69,8 @@ export interface PairingData {
 export interface DistributedKey {
 	accountId: number;
 	publicKey: string;
-	keyShareData: P1KeyshareV2;
+	// keyShareData: P1KeyshareDataV2;
+	keyShareData: IP1KeyShare;
 }
 
 export type Wallet = {
