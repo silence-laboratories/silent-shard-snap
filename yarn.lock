@@ -2619,6 +2619,7 @@ __metadata:
     "@metamask/snaps-ui": ^0.35.2-flask.1
     "@metamask/utils": ^8.1.0
     "@silencelaboratories/ecdsa-tss": ^1.1.3
+    "@silencelaboratories/two-party-ecdsa-js": ^7.0.5
     "@types/libsodium-wrappers": ^0.7.10
     "@types/node": ^20.6.2
     "@typescript-eslint/eslint-plugin": ^5.33.0
@@ -2643,6 +2644,16 @@ __metadata:
     uuid: ^9.0.0
   languageName: unknown
   linkType: soft
+
+"@silencelaboratories/two-party-ecdsa-js@npm:^7.0.5":
+  version: 7.0.5
+  resolution: "@silencelaboratories/two-party-ecdsa-js@npm:7.0.5"
+  dependencies:
+    benchmark: ^2.1.4
+    libsodium-wrappers-sumo: ^0.7.11
+  checksum: 040164858263e321d649ebf1eb71b1f36428e834e162eb245db7c9c9c167a03dbe81a0d070d2c8101d7784dda631a8aee4d7999dba52a4f93fe3babe8a3c304c
+  languageName: node
+  linkType: hard
 
 "@spruceid/siwe-parser@npm:1.1.3":
   version: 1.1.3
@@ -3748,6 +3759,16 @@ __metadata:
   version: 1.5.1
   resolution: "base64-js@npm:1.5.1"
   checksum: 669632eb3745404c2f822a18fc3a0122d2f9a7a13f7fb8b5823ee19d1d2ff9ee5b52c53367176ea4ad093c332fd5ab4bd0ebae5a8e27917a4105a4cfc86b1005
+  languageName: node
+  linkType: hard
+
+"benchmark@npm:^2.1.4":
+  version: 2.1.4
+  resolution: "benchmark@npm:2.1.4"
+  dependencies:
+    lodash: ^4.17.4
+    platform: ^1.3.3
+  checksum: aa466561d4f2b0a2419a3069b8f90fd35ffacf26849697eea9de525ecfbd10b44da11070cc51c88d772076db8cb2415641b493de7d6c024fdf8551019c6fcf1c
   languageName: node
   linkType: hard
 
@@ -6955,6 +6976,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"libsodium-sumo@npm:^0.7.13":
+  version: 0.7.13
+  resolution: "libsodium-sumo@npm:0.7.13"
+  checksum: d0905530c53c27a0c01348eed8abc2ecf3725c0647545cc528ea4bbd0ee63b7a471b56abefec5b293086ee64b5ba7cf911a655cd2c36f400a4bfec6e2d152ebd
+  languageName: node
+  linkType: hard
+
+"libsodium-wrappers-sumo@npm:^0.7.11":
+  version: 0.7.13
+  resolution: "libsodium-wrappers-sumo@npm:0.7.13"
+  dependencies:
+    libsodium-sumo: ^0.7.13
+  checksum: cdaa7ae5d64e71e860b40b5f2fbaec156adc7bc5606f7d32655b6ab84c9878fd90b3a41e99cb96380f0b5727d1ee1c6ad5b440bff35ce8289832e5c8cac99973
+  languageName: node
+  linkType: hard
+
 "libsodium-wrappers@npm:^0.7.11":
   version: 0.7.13
   resolution: "libsodium-wrappers@npm:0.7.13"
@@ -7015,7 +7052,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:^4.17.21":
+"lodash@npm:^4.17.21, lodash@npm:^4.17.4":
   version: 4.17.21
   resolution: "lodash@npm:4.17.21"
   checksum: eb835a2e51d381e561e508ce932ea50a8e5a68f4ebdd771ea240d3048244a8d13658acbd502cd4829768c56f2e16bdd4340b9ea141297d472517b83868e677f7
@@ -7939,6 +7976,13 @@ __metadata:
   version: 2.3.1
   resolution: "picomatch@npm:2.3.1"
   checksum: 050c865ce81119c4822c45d3c84f1ced46f93a0126febae20737bd05ca20589c564d6e9226977df859ed5e03dc73f02584a2b0faad36e896936238238b0446cf
+  languageName: node
+  linkType: hard
+
+"platform@npm:^1.3.3":
+  version: 1.3.6
+  resolution: "platform@npm:1.3.6"
+  checksum: 6f472a09c61d418c7e26c1c16d0bdc029549d512dbec6526216a1e59ec68100d07007d0097dcba69dddad883d6f2a83361b4bdfe0094a3d9a2af24158643d85e
   languageName: node
   linkType: hard
 

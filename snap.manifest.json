@@ -18,6 +18,7 @@
     }
   },
   "initialPermissions": {
+    "endowment:webassembly": {},
     "endowment:keyring": {
       "allowedOrigins": [
         "https://snap.silencelaboratories.com"
