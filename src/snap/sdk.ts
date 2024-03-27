@@ -11,9 +11,9 @@ import { fromHexStringToBytes, getAddressFromDistributedKey } from './utils';
 import { saveSilentShareStorage, getSilentShareStorage } from './storage';
 import { SignMetadata, StorageData } from '../types';
 import { SnapError, SnapErrorCode } from '../error';
-// import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
+import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
 
-import { P1KeyshareV2 } from '@silencelaboratories/two-party-ecdsa-js';
+// import { P1KeyshareV2 } from '@silencelaboratories/two-party-ecdsa-js';
 
 import { v4 as uuid } from 'uuid';
 
@@ -172,7 +172,8 @@ async function runSign(
 	messageHashHex: string,
 	signMetadata: SignMetadata,
 	accountId: number,
-	keyShare: P1KeyshareV2,
+	keyShare: IP1KeyShare,
+	// keyShare: P1KeyshareV2,
 ) {
 	if (messageHashHex.startsWith('0x')) {
 		messageHashHex = messageHashHex.slice(2);
