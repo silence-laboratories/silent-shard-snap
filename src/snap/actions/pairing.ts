@@ -173,7 +173,6 @@ export const getToken = async (currentAccountAddress?: string) => {
 			tokenExpiration: data.tokenExpiration,
 			deviceName: data.deviceName,
 		};
-		console.log('pairingData', pairingData)
 		return {
 			newPairingState: {
 				pairingData,

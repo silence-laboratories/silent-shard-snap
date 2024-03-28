@@ -72,7 +72,6 @@ export const keygen = async (
 		let expectResponse = true;
 		await _sodium.ready;
 		while (keyshare === null) {
-			console.log('keygenConversation', keygenConversation);
 			let decryptedMessage: string | null = null;
 			if (
 				keygenConversation.message.message &&
