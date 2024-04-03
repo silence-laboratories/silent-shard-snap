@@ -2,6 +2,7 @@
 // This software is licensed under the Silence Laboratories License Agreement.
 
 import {
+	DialogType,
 	OnKeyringRequestHandler,
 	OnRpcRequestHandler,
 } from '@metamask/snaps-types';
@@ -13,7 +14,7 @@ import { SnapError, SnapErrorCode } from './error';
 import { handleKeyringRequest } from '@metamask/keyring-api';
 import { SimpleKeyring } from './snap/keyring';
 import { snapVersion } from './firebaseApi';
-import { PERMISSIONS, STAGING_PERMISSIONS } from './permissions';
+import { InternalMethod, PERMISSIONS, STAGING_PERMISSIONS } from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
 import { StorageData } from './types';
 import { version as SNAP_VERSION } from './../package.json';
@@ -28,7 +29,7 @@ const showConfirmationMessage = async (
 	return await snap.request({
 		method: 'snap_dialog',
 		params: {
-			type: 'confirmation',
+			type: DialogType.Confirmation,
 			content: panel([
 				heading(prompt),
 				divider(),
@@ -58,10 +59,10 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		);
 	}
 	switch (request.method) {
-		case 'tss_isPaired':
+		case InternalMethod.TssIsPaired:
 			return await isPaired();
 
-		case 'tss_unpair':
+		case InternalMethod.TssUnPair:
 			await deleteStorage();
 			return;
 
@@ -76,7 +77,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 1. RejectedPairingRequest, when user rejected the pairing request
 		 * 2. UnknownError, when something unknown error occurs
 		 */
-		case 'tss_initPairing':
+		case InternalMethod.TssInitPairing:
 			const isRePair = (request.params as [{ isRePair: boolean }])[0]
 				.isRePair;
 			if (!isRePair) {
@@ -116,7 +117,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 4. FirebaseError, when error occurs on server side, message will contains info,
 		 * 6. UnknownError, when something unknown error occurs
 		 */
-		case 'tss_runPairing':
+		case InternalMethod.TssRunPairing:
 			const pairingRes = await sdk.runPairing();
 			return {
 				address: pairingRes.newAccountAddress,
@@ -139,7 +140,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 4. FirebaseError, when error occurs on server side, message will contains info,
 		 * 6. UnknownError, when something unknown error occurs
 		 */
-		case 'tss_runRePairing':
+		case InternalMethod.TssRunRePairing:
 			const repairingRes = await sdk.runRePairing();
 			return {
 				currentAccountAddress: repairingRes.currentAccountAddress,
@@ -165,7 +166,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 7. UserPhoneDenied, when user deined from other device,
 		 * 8. KeygenFailed, when keygen failed due to some other reason
 		 */
-		case 'tss_runKeygen':
+		case InternalMethod.TssRunKeygen:
 			let silentShareStorage: StorageData = await getSilentShareStorage();
 			const keygenRes = await sdk.runKeygen();
 			await sdk.runBackup();
@@ -186,7 +187,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * latestVersion: latest version of the snap available,
 		 *
 		 */
-		case 'tss_snapVersion':
+		case InternalMethod.TssSnapVersion:
 			const snapLatestVersion = await snapVersion();
 
 			return {
