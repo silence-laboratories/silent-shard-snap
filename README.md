@@ -27,6 +27,11 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 ### Publish
 -   To publish the snap run `npm publish`. You will need to login with valid npm account before deploying new version. If you encounter any issue, delete the .npmrc and try again.
 
+## How to test
+
+- Use [a Jest preset](https://github.com/MetaMask/snaps/tree/main/packages/snaps-jest) for end-to-end testing MetaMask Snaps.
+- Run `yarn test` or `yarn test --coverage` to see test result and coverage.
+
 ## Debugging
 
 If you need to open the snap console, see steps [here](https://docs.metamask.io/guide/snaps-development-guide.html#debugging-your-snap)

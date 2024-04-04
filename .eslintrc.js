@@ -14,5 +14,13 @@ module.exports = {
 		},
 	],
 
-	ignorePatterns: ['!.eslintrc.js', 'dist/', 'index.js'],
+	ignorePatterns: [
+		'!.prettierrc.js',
+		'**/!.eslintrc.js',
+		'**/dist*/',
+		'**/*__GENERATED__*',
+		'**/build',
+		'**/public',
+		'**/.cache',
+	  ],
 };
