@@ -16,7 +16,6 @@ import { SimpleKeyring } from './snap/keyring';
 import { snapVersion } from './firebaseApi';
 import { InternalMethod, PERMISSIONS, STAGING_PERMISSIONS } from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
-import { StorageData } from './types';
 import { version as SNAP_VERSION } from './../package.json';
 window.Buffer = window.Buffer || Buffer;
 
@@ -169,7 +168,6 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 8. KeygenFailed, when keygen failed due to some other reason
 		 */
 		case InternalMethod.TssRunKeygen:
-			let silentShareStorage: StorageData = await getSilentShareStorage();
 			const keygenRes = await sdk.runKeygen();
 			await sdk.runBackup();
 			return {
