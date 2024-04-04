@@ -25,7 +25,7 @@ afterAll(() => {
 });
 
 describe('onRpcRequest', () => {
-	describe('check permission on rpc call', () => {
+	describe('wrong permission and rejection', () => {
 		it('throws an error if origin does not have permission', async () => {
 			const { request } = await installSnap();
 
@@ -56,9 +56,34 @@ describe('onRpcRequest', () => {
 				stack: expect.any(String),
 			});
 		});
+
+		it('throws a custom error if key pairing rejected', async () => {
+			const { request } = await installSnap();
+
+			const response = request({
+				method: InternalMethod.TssInitPairing,
+				origin: ORIGIN,
+				params: [{ isRePair: false }],
+			});
+
+			const ui =
+				(await response.getInterface()) as SnapConfirmationInterface;
+			expect(ui.type).toBe(DialogType.Confirmation);
+			await ui.cancel();
+
+			const respJson: any = (await response).response;
+			const errorResp = respJson.error;
+			const snapErrorJson = errorResp.message;
+			const snapError = JSON.parse(snapErrorJson) as SnapError;
+
+			expect(snapError.message).toEqual('Pairing is rejected.');
+			expect(snapError.code).toEqual(
+				SnapErrorCode.RejectedPairingRequest,
+			);
+		});
 	});
 
-	describe('key pairing and generation', () => {
+	describe('pairing and key generation', () => {
 		it('tss_isPaired should be failed before pairing', async () => {
 			const { request } = await installSnap();
 
@@ -142,7 +167,7 @@ describe('onRpcRequest', () => {
 			await unpairReq;
 		});
 
-		it('repairing from mobile and non-repairing from dapp should be success', async () => {
+		it('repairing: without tss_runRePairing should be success', async () => {
 			const { request } = await installSnap();
 
 			const initPairingReq = request({
@@ -189,31 +214,6 @@ describe('onRpcRequest', () => {
 				runPairingJson.result as RunPairingResponse;
 			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
 			expect(runPairingResult.address).toEqual(expect.any(String));
-		});
-
-		it('throws a custom error if key pairing rejected', async () => {
-			const { request } = await installSnap();
-
-			const response = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui =
-				(await response.getInterface()) as SnapConfirmationInterface;
-			expect(ui.type).toBe(DialogType.Confirmation);
-			await ui.cancel();
-
-			const respJson: any = (await response).response;
-			const errorResp = respJson.error;
-			const snapErrorJson = errorResp.message;
-			const snapError = JSON.parse(snapErrorJson) as SnapError;
-
-			expect(snapError.message).toEqual('Pairing is rejected.');
-			expect(snapError.code).toEqual(
-				SnapErrorCode.RejectedPairingRequest,
-			);
 		});
 	});
 });
