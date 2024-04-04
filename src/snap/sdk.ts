@@ -48,6 +48,7 @@ async function initPairing() {
 }
 
 async function runPairing() {
+	console.log("-runPairing");
 	let result = await PairingAction.getToken();
 	await saveSilentShareStorage({
 		newPairingState: result.newPairingState,
@@ -56,6 +57,7 @@ async function runPairing() {
 		requests: {},
 	});
 	const distributedKey = result.newPairingState.distributedKey;
+	console.log("+runPairing");
 	return {
 		pairingStatus: 'paired',
 		newAccountAddress: distributedKey

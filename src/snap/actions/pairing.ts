@@ -95,6 +95,7 @@ const getDistributedKeyFromBackupData = async (
 };
 
 export const getToken = async (currentAccountAddress?: string) => {
+	console.log("-getToken");
 	try {
 		if (!pairingDataInit) {
 			throw new SnapError(
@@ -173,7 +174,7 @@ export const getToken = async (currentAccountAddress?: string) => {
 			tokenExpiration: data.tokenExpiration,
 			deviceName: data.deviceName,
 		};
-
+		console.log("+getToken");
 		return {
 			newPairingState: {
 				pairingData,
@@ -184,6 +185,7 @@ export const getToken = async (currentAccountAddress?: string) => {
 			deviceName: data.deviceName,
 		};
 	} catch (error) {
+		console.log("getToken error", error);
 		if (error instanceof Error) {
 			throw error;
 		} else throw new SnapError('unkown-error', SnapErrorCode.UnknownError);

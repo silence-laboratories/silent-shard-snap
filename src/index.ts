@@ -118,7 +118,9 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 6. UnknownError, when something unknown error occurs
 		 */
 		case InternalMethod.TssRunPairing:
+			console.log("1-");
 			const pairingRes = await sdk.runPairing();
+			console.log("1+");
 			return {
 				address: pairingRes.newAccountAddress,
 				deviceName: pairingRes.deviceName,
