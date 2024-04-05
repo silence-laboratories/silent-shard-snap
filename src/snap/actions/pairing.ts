@@ -55,7 +55,7 @@ export const init = async () => {
 	}
 };
 
-const updatePairingObject = async (
+const sendPairingFirebaseDoc = async (
 	token: string,
 	pairingId: string,
 	pairingObject:
@@ -68,7 +68,8 @@ const updatePairingObject = async (
 	await sendMessage(token, 'pairing', pairingObject, false, pairingId);
 };
 
-const getDistributedKeyFromBackupData = async (
+const decryptAndDeserializeBackupData = async (
+	token: string,
 	backupData: string,
 ): Promise<{ distributedKey: DistributedKey; accountAddress: string }> => {
 	try {
@@ -82,6 +83,10 @@ const getDistributedKeyFromBackupData = async (
 			accountAddress,
 		};
 	} catch (error) {
+		await sendPairingFirebaseDoc(token, pairingDataInit.pairingId, {
+			isPaired: false,
+			pairingRemark: PairingRemark.INVALID_BACKUP_DATA,
+		});
 		if (error instanceof SnapError) {
 			throw error;
 		} else if (error instanceof Error) {
@@ -94,8 +99,33 @@ const getDistributedKeyFromBackupData = async (
 	}
 };
 
-export const getToken = async (currentAccountAddress?: string) => {
-	console.log("-getToken");
+const validatePairingAccount = async (
+	sessionToken: string,
+	pairingId: string,
+	accountAddress?: string,
+	currentAccountAddress?: string,
+) => {
+	if (currentAccountAddress && accountAddress == null) {
+		await sendPairingFirebaseDoc(sessionToken, pairingId, {
+			isPaired: false,
+			pairingRemark: PairingRemark.NO_BACKUP_DATA_WHILE_REPAIRING,
+		});
+	} else if (
+		currentAccountAddress &&
+		accountAddress &&
+		currentAccountAddress !== accountAddress
+	) {
+		await sendPairingFirebaseDoc(sessionToken, pairingId, {
+			isPaired: true,
+			pairingRemark: PairingRemark.WALLET_MISMATCH,
+		});
+	} else
+		await sendPairingFirebaseDoc(sessionToken, pairingId, {
+			isPaired: true,
+		});
+};
+
+export const getPairingSessionData = async (currentAccountAddress?: string) => {
 	try {
 		if (!pairingDataInit) {
 			throw new SnapError(
@@ -104,61 +134,39 @@ export const getToken = async (currentAccountAddress?: string) => {
 			);
 		}
 
-		let startTime = Date.now();
-
+		const startTime = Date.now();
+		const pairingId = pairingDataInit.pairingId;
 		const signature = _sodium.crypto_sign_detached(
-			pairingDataInit.pairingId,
+			pairingId,
 			pairingDataInit.signPair.privateKey,
 		);
 
-		const data = await getTokenEndpoint(
-			pairingDataInit.pairingId,
+		const pairingResponse = await getTokenEndpoint(
+			pairingId,
 			_sodium.to_hex(signature),
 		);
+		const sessionToken = pairingResponse.token;
 
-		let tempDistributedKey: DistributedKey | null = null;
-		let tempAccountAddress: string | null = null;
-
-		if (data.backupData) {
-			try {
-				const { distributedKey, accountAddress } =
-					await getDistributedKeyFromBackupData(data.backupData);
-				tempDistributedKey = distributedKey;
-				tempAccountAddress = accountAddress;
-			} catch (error) {
-				await updatePairingObject(
-					data.token,
-					pairingDataInit.pairingId,
-					{
-						isPaired: false,
-						pairingRemark: PairingRemark.INVALID_BACKUP_DATA,
-					},
-				);
-				throw error;
-			}
+		let distributedKey: DistributedKey | undefined;
+		let accountAddress: string | undefined;
+		if (pairingResponse.backupData) {
+			const backupDataJson = await decryptAndDeserializeBackupData(
+				sessionToken,
+				pairingResponse.backupData,
+			);
+			distributedKey = backupDataJson.distributedKey;
+			accountAddress = backupDataJson.accountAddress;
 		}
 
-		if (currentAccountAddress && tempAccountAddress == null) {
-			await updatePairingObject(data.token, pairingDataInit.pairingId, {
-				isPaired: false,
-				pairingRemark: PairingRemark.NO_BACKUP_DATA_WHILE_REPAIRING,
-			});
-		} else if (
-			currentAccountAddress &&
-			tempAccountAddress &&
-			currentAccountAddress !== tempAccountAddress
-		) {
-			await updatePairingObject(data.token, pairingDataInit.pairingId, {
-				isPaired: true,
-				pairingRemark: PairingRemark.WALLET_MISMATCH,
-			});
-		} else
-			await updatePairingObject(data.token, pairingDataInit.pairingId, {
-				isPaired: true,
-			});
+		await validatePairingAccount(
+			sessionToken,
+			pairingId,
+			accountAddress,
+			currentAccountAddress,
+		);
 
 		const pairingData: PairingData = {
-			pairingId: pairingDataInit.pairingId,
+			pairingId: pairingId,
 			webEncPublicKey: _sodium.to_hex(pairingDataInit.encPair.publicKey),
 			webEncPrivateKey: _sodium.to_hex(
 				pairingDataInit.encPair.privateKey,
@@ -169,23 +177,21 @@ export const getToken = async (currentAccountAddress?: string) => {
 			webSignPrivateKey: _sodium.to_hex(
 				pairingDataInit.signPair.privateKey,
 			),
-			appPublicKey: data.appPublicKey,
-			token: data.token,
-			tokenExpiration: data.tokenExpiration,
-			deviceName: data.deviceName,
+			appPublicKey: pairingResponse.appPublicKey,
+			token: sessionToken,
+			tokenExpiration: pairingResponse.tokenExpiration,
+			deviceName: pairingResponse.deviceName,
 		};
-		console.log("+getToken");
 		return {
 			newPairingState: {
 				pairingData,
-				distributedKey: tempDistributedKey ?? null,
-				accountId: tempDistributedKey ? uuid() : null,
+				distributedKey: distributedKey ?? null,
+				accountId: distributedKey ? uuid() : null,
 			},
 			elapsedTime: Date.now() - startTime,
-			deviceName: data.deviceName,
+			deviceName: pairingResponse.deviceName,
 		};
 	} catch (error) {
-		console.log("getToken error", error);
 		if (error instanceof Error) {
 			throw error;
 		} else throw new SnapError('unkown-error', SnapErrorCode.UnknownError);

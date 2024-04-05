@@ -48,8 +48,7 @@ async function initPairing() {
 }
 
 async function runPairing() {
-	console.log("-runPairing");
-	let result = await PairingAction.getToken();
+	let result = await PairingAction.getPairingSessionData();
 	await saveSilentShareStorage({
 		newPairingState: result.newPairingState,
 		pairingData: result.newPairingState.pairingData,
@@ -57,7 +56,7 @@ async function runPairing() {
 		requests: {},
 	});
 	const distributedKey = result.newPairingState.distributedKey;
-	console.log("+runPairing");
+	
 	return {
 		pairingStatus: 'paired',
 		newAccountAddress: distributedKey
@@ -79,7 +78,7 @@ async function runRePairing() {
 		currentAccount?.distributedKey,
 	);
 
-	let result = await PairingAction.getToken(currentAccountAddress);
+	let result = await PairingAction.getPairingSessionData(currentAccountAddress);
 
 	const distributedKey = result.newPairingState.distributedKey;
 	const newAccountAddress = distributedKey
