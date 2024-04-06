@@ -14,9 +14,14 @@ import { SnapError, SnapErrorCode } from './error';
 import { handleKeyringRequest } from '@metamask/keyring-api';
 import { SimpleKeyring } from './snap/keyring';
 import { snapVersion } from './firebaseApi';
-import { InternalMethod, PERMISSIONS, STAGING_PERMISSIONS } from './permissions';
+import {
+	InternalMethod,
+	PERMISSIONS,
+	STAGING_PERMISSIONS,
+} from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
 import { version as SNAP_VERSION } from './../package.json';
+import { StorageData } from './types';
 window.Buffer = window.Buffer || Buffer;
 
 let keyring: SimpleKeyring;
@@ -117,9 +122,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 * 6. UnknownError, when something unknown error occurs
 		 */
 		case InternalMethod.TssRunPairing:
-			console.log("1-");
 			const pairingRes = await sdk.runPairing();
-			console.log("1+");
 			return {
 				address: pairingRes.newAccountAddress,
 				deviceName: pairingRes.deviceName,
@@ -195,6 +198,13 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 				latestVersion: snapLatestVersion,
 			};
 
+		case InternalMethod.E2eTestGetKeyShare:
+			let silentShareStorage: StorageData = await getSilentShareStorage();
+			return {
+				distributedKey:
+					silentShareStorage.newPairingState?.distributedKey,
+				pairingData: silentShareStorage.pairingData,
+			};
 		default:
 			throw new SnapError('Unknown method', SnapErrorCode.UnknownMethod);
 	}

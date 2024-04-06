@@ -4,15 +4,15 @@
   "proposedName": "Silent Shard",
   "repository": {
     "type": "git",
-    "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap"
+    "url": "https://www.npmjs.com/package/@silencelaboratories/silent-shard-snap-staging"
   },
   "source": {
-    "shasum": "VZ17/cYzI3r0enhBj9opLxm0upgc+mLlaBWCQrgGCtk=",
+    "shasum": "zuaB80vCqO/l72/+LlRSfBIwQCx7a56b5ZPhLuvXnDw=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
         "iconPath": "images/silentShardLogo.svg",
-        "packageName": "@silencelaboratories/silent-shard-snap",
+        "packageName": "@silencelaboratories/silent-shard-snap-staging",
         "registry": "https://registry.npmjs.org/"
       }
     }
@@ -20,7 +20,8 @@
   "initialPermissions": {
     "endowment:keyring": {
       "allowedOrigins": [
-        "https://snap.silencelaboratories.com"
+        "https://snap-staging.silencelaboratories.com",
+        "http://localhost:3000"
       ]
     },
     "snap_dialog": {},
@@ -29,7 +30,8 @@
     "endowment:network-access": {},
     "endowment:rpc": {
       "allowedOrigins": [
-        "https://snap.silencelaboratories.com"
+        "https://snap-staging.silencelaboratories.com",
+        "http://localhost:3000"
       ]
     },
     "snap_getEntropy": {},
