@@ -201,19 +201,6 @@ describe('test rpc requests to Snap', () => {
 				requests: {},
 			});
 
-			const mockTx = {
-				type: '0x2',
-				nonce: '0x1',
-				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
-				from: '0x660265edc169bab511a40c0e049cc1e33774443d',
-				value: '0x0',
-				data: '0x',
-				gasLimit: '0x5208',
-				maxPriorityFeePerGas: '0x3b9aca00',
-				maxFeePerGas: '0x2540be400',
-				accessList: [],
-				chainId: '0xaa36a7',
-			};
 			const pairingData = keyshareResult.pairingData;
 			const runSign = async (
 				hashAlg: string,
@@ -254,9 +241,24 @@ describe('test rpc requests to Snap', () => {
 					accountId,
 				);
 			};
+
+			// Test eip1559 signing
+			const mockEip1559Tx: any = {
+				type: '0x2',
+				nonce: '0x1',
+				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
+				from: '0x660265edc169bab511a40c0e049cc1e33774443d',
+				value: '0x0',
+				data: '0x',
+				gasLimit: '0x5208',
+				maxPriorityFeePerGas: '0x3b9aca00',
+				maxFeePerGas: '0x2540be400',
+				accessList: [],
+				chainId: '0xaa36a7',
+			};
 			let signResult: any = null;
 			keyring
-				.signTransaction(mockTx, runSign)
+				.signTransaction(mockEip1559Tx, runSign)
 				.then(async (resp: any) => {
 					signResult = resp;
 				})
@@ -268,7 +270,13 @@ describe('test rpc requests to Snap', () => {
 			while (!signResult) {
 				console.log('waiting for signing result');
 			}
-			expect(signResult.from).toEqual(mockTx.from);
+
+			for (const key in mockEip1559Tx) {
+				if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
+					expect(signResult[key]).toEqual(mockEip1559Tx[key]);
+				}
+			}
+
 			const common = Common.custom(
 				{ chainId: signResult.chainId },
 				{
@@ -283,6 +291,14 @@ describe('test rpc requests to Snap', () => {
 				common,
 			});
 			expect(tx.verifySignature()).toEqual(true);
+
+			// Test legacy signing
+
+			// Test typed data sign 
+
+			// Test personal sign
+
+			// Test eth sign
 		});
 
 		it('tss_unpair should be success', async () => {

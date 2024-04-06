@@ -243,7 +243,7 @@ export class SimpleKeyring implements Keyring {
 		switch (method) {
 			case 'personal_sign': {
 				const [message, from] = params as [string, string];
-				return this.signPersonalMessage(from, message);
+				return this.signPersonalMessage(from, message, runSign);
 			}
 
 			case 'eth_sendTransaction':
@@ -259,7 +259,7 @@ export class SimpleKeyring implements Keyring {
 					Json,
 					{ version: SignTypedDataVersion },
 				];
-				return this.signTypedData(from, data, opts, method);
+				return this.signTypedData(from, data, opts, method, runSign);
 			}
 			case 'eth_signTypedData_v3': {
 				const [from, data] = params as [string, Json];
@@ -268,6 +268,7 @@ export class SimpleKeyring implements Keyring {
 					data,
 					{ version: SignTypedDataVersion.V3 },
 					method,
+					runSign
 				);
 			}
 			case 'eth_signTypedData_v4': {
@@ -277,12 +278,13 @@ export class SimpleKeyring implements Keyring {
 					data,
 					{ version: SignTypedDataVersion.V4 },
 					method,
+					runSign
 				);
 			}
 
 			case 'eth_sign': {
 				const [from, data] = params as [string, string];
-				return this.signMessage(from, data);
+				return this.signMessage(from, data, runSign);
 			}
 
 			default: {
@@ -360,6 +362,7 @@ export class SimpleKeyring implements Keyring {
 			version: SignTypedDataVersion.V1,
 		},
 		method: SignMetadata,
+		runTssSign: RunSign
 	): Promise<string> {
 		const wallet = this.#getWalletByAddress(from);
 		const messageHash =
@@ -368,7 +371,7 @@ export class SimpleKeyring implements Keyring {
 				: TypedDataUtils.eip712Hash(data as any, opts.version).toString(
 						'hex',
 				  );
-		const { signature, recId } = await runSign(
+		const { signature, recId } = await runTssSign(
 			'none',
 			messageHash,
 			messageHash,
@@ -383,13 +386,13 @@ export class SimpleKeyring implements Keyring {
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async signPersonalMessage(from: string, request: string): Promise<string> {
+	async signPersonalMessage(from: string, request: string, runTssSign: RunSign): Promise<string> {
 		const messageHash = toHexString(
 			hashPersonalMessage(Buffer.from(request.slice(2), 'hex')),
 		);
 		const wallet = this.#getWalletByAddress(from);
 
-		const { signature, recId } = await runSign(
+		const { signature, recId } = await runTssSign(
 			'keccak256',
 			request,
 			messageHash,
@@ -404,7 +407,7 @@ export class SimpleKeyring implements Keyring {
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async signMessage(from: string, data: string): Promise<string> {
+	async signMessage(from: string, data: string, runTssSign: RunSign): Promise<string> {
 		const message = stripHexPrefix(data);
 		const messageHash = keccak256('0x' + message).toString('hex');
 		const wallet = this.#getWalletByAddress(from);
