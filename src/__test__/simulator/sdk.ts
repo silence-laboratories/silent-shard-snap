@@ -1,4 +1,4 @@
-import { b64ToString, toHexString } from './../../snap/utils';
+import { b64ToString } from './../../snap/utils';
 import {
 	IP2KeyShare,
 	P2KeyGen,
@@ -87,7 +87,7 @@ class sdk2 {
 		}
 	};
 
-	public keygen = async () => {
+	public keygen = async (isApproved = true) => {
 		if (!this.uid) {
 			throw new Error(`Uid missing`);
 		}
@@ -114,7 +114,6 @@ class sdk2 {
 					}
 					if (conversation) {
 						const message = conversation.message;
-						const isApproved = true;
 						if (!isApproved && this.uid) {
 							await setDoc(doc(db, 'keygen', this.pairingId!), {
 								...conversation,
@@ -188,7 +187,7 @@ class sdk2 {
 		}
 	};
 
-	public sign = async () => {
+	public sign = async (isApproved = true) => {
 		await _sodium.ready;
 		if (!this.uid) {
 			throw new Error(`Uid missing`);
@@ -220,15 +219,7 @@ class sdk2 {
 					}
 					if (conversation) {
 						const message = conversation.message;
-						const expiry_at =
-							conversation.createdAt + conversation.expiry;
-						const now = Date.now();
-						if (expiry_at < now) {
-							console.error(
-								'Data expired but process will continue',
-							);
-						}
-						const isApproved = true;
+						validateMessage(conversation);
 						if (!isApproved) {
 							await setDoc(doc(db, 'sign', this.pairingId!), {
 								...conversation,
@@ -273,14 +264,18 @@ class sdk2 {
 									this.phoneEncPrivateKey,
 								),
 							);
-							const msg = await p2.processMessage(decMessage);
+							const decodedMessage = b64ToString(decMessage);
+							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
 								const nonce = _sodium.randombytes_buf(
 									_sodium.crypto_box_NONCEBYTES,
 								);
 								const encMessage = _sodium.to_base64(
 									_sodium.crypto_box_easy(
-										msg.msg_to_send,
+										_sodium.to_base64(
+											msg.msg_to_send,
+											base64_variants.ORIGINAL,
+										),
 										nonce,
 										this.webEncPublicKey,
 										this.phoneEncPrivateKey,
@@ -332,11 +327,22 @@ class sdk2 {
 			this.unSub();
 		}
 	};
-
-	
-
-	
 }
+
+const validateMessage = (conversation: SignConversation) => {
+	const expiry_at = conversation.createdAt + conversation.expiry;
+	const now = Date.now();
+	if (conversation.createdAt > now) {
+		console.error(
+			`Sign message on round ${conversation.message.round} of party ${conversation.message.party} has incorrect creation date`,
+		);
+	}
+	if (expiry_at < now) {
+		console.error(
+			`Sign message on round ${conversation.message.round} of party ${conversation.message.party} expired`,
+		);
+	}
+};
 
 const sdkSingleton = new sdk2();
 
