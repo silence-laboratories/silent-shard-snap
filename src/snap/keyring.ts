@@ -243,14 +243,14 @@ export class SimpleKeyring implements Keyring {
 		switch (method) {
 			case 'personal_sign': {
 				const [message, from] = params as [string, string];
-				return this.#signPersonalMessage(from, message);
+				return this.signPersonalMessage(from, message);
 			}
 
 			case 'eth_sendTransaction':
 			case 'eth_signTransaction':
 			case 'sign_transaction': {
 				const [tx] = params as [Json];
-				return await this.#signTransaction(tx);
+				return await this.signTransaction(tx, runSign);
 			}
 
 			case 'eth_signTypedData_v1': {
@@ -259,11 +259,11 @@ export class SimpleKeyring implements Keyring {
 					Json,
 					{ version: SignTypedDataVersion },
 				];
-				return this.#signTypedData(from, data, opts, method);
+				return this.signTypedData(from, data, opts, method);
 			}
 			case 'eth_signTypedData_v3': {
 				const [from, data] = params as [string, Json];
-				return this.#signTypedData(
+				return this.signTypedData(
 					from,
 					data,
 					{ version: SignTypedDataVersion.V3 },
@@ -272,7 +272,7 @@ export class SimpleKeyring implements Keyring {
 			}
 			case 'eth_signTypedData_v4': {
 				const [from, data] = params as [string, Json];
-				return this.#signTypedData(
+				return this.signTypedData(
 					from,
 					data,
 					{ version: SignTypedDataVersion.V4 },
@@ -282,7 +282,7 @@ export class SimpleKeyring implements Keyring {
 
 			case 'eth_sign': {
 				const [from, data] = params as [string, string];
-				return this.#signMessage(from, data);
+				return this.signMessage(from, data);
 			}
 
 			default: {
@@ -291,7 +291,7 @@ export class SimpleKeyring implements Keyring {
 		}
 	}
 
-	async #signTransaction(tx: any): Promise<string> {
+	async signTransaction(tx: any, runTssSign: RunSign): Promise<string> {
 		const { from } = tx;
 		// Patch the transaction to make sure that the `chainId` is a hex string.
 		if (!tx.chainId.startsWith('0x')) {
@@ -324,7 +324,7 @@ export class SimpleKeyring implements Keyring {
 		const transactionMetadata: SignMetadata =
 			tx1.type == 0 ? 'legacy_transaction' : 'eth_transaction';
 
-		const { signature, recId } = await runSign(
+		const { signature, recId } = await runTssSign(
 			'keccak256',
 			serializedMessage,
 			hashedMsg,
@@ -349,11 +349,11 @@ export class SimpleKeyring implements Keyring {
 			r: '0x' + r,
 			s: '0x' + s,
 		};
-
+		console.log('signTransaction serializedTx', serializedTx);
 		return serializedTx;
 	}
 
-	async #signTypedData(
+	async signTypedData(
 		from: string,
 		data: Json,
 		opts: { version: SignTypedDataVersion } = {
@@ -376,10 +376,14 @@ export class SimpleKeyring implements Keyring {
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
 		);
+		console.log(
+			'signTypedData signature',
+			'0x' + signature + (recId + 27).toString(16),
+		);
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async #signPersonalMessage(from: string, request: string): Promise<string> {
+	async signPersonalMessage(from: string, request: string): Promise<string> {
 		const messageHash = toHexString(
 			hashPersonalMessage(Buffer.from(request.slice(2), 'hex')),
 		);
@@ -393,11 +397,14 @@ export class SimpleKeyring implements Keyring {
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
 		);
-
+		console.log(
+			'signPersonalMessage signature',
+			'0x' + signature + (recId + 27).toString(16),
+		);
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async #signMessage(from: string, data: string): Promise<string> {
+	async signMessage(from: string, data: string): Promise<string> {
 		const message = stripHexPrefix(data);
 		const messageHash = keccak256('0x' + message).toString('hex');
 		const wallet = this.#getWalletByAddress(from);
@@ -408,6 +415,10 @@ export class SimpleKeyring implements Keyring {
 			'eth_sign',
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
+		);
+		console.log(
+			'signMessage signature',
+			'0x' + signature + (recId + 27).toString(16),
 		);
 		return '0x' + signature + (recId + 27).toString(16);
 	}

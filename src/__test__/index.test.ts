@@ -1,19 +1,28 @@
+import { pairing } from './simulator/index';
 import { expect } from '@jest/globals';
 import { SnapConfirmationInterface, installSnap } from '@metamask/snaps-jest';
 import { DialogType, panel, text } from '@metamask/snaps-sdk';
 import { divider, heading } from '@metamask/snaps-ui';
 import { SnapError, SnapErrorCode } from '../error';
-import { InternalMethod } from '../permissions';
+import { DAPP_URL_STAGING, InternalMethod } from '../permissions';
 import * as simulator from './simulator';
+import { SimpleKeyring } from '../snap/keyring';
+import { DistributedKey, PairingData, SignMetadata, Wallet } from '../types';
+import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
+import { fromHexStringToBytes } from '../snap/utils';
+import * as SignAction from '../snap/actions/sign';
+import { TransactionFactory } from '@ethereumjs/tx';
+import { Common, Hardfork } from '@ethereumjs/common';
 
-const ORIGIN = 'https://snap.silencelaboratories.com';
+const ORIGIN = DAPP_URL_STAGING;
 const INIT_PAIR_PANEL_HEADING = `Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`;
 const INIT_PAIR_PANEL_DESCRIPTION = [
 	'👉🏻 To get started, grab the companion Silent Shard app from either the Apple App Store or Google Play.',
 	`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
 	`Happy to have you onboard! 🥳`,
-]
-export const DEVICE_NAME = 'e2e-test-device' + Math.floor(Math.random() * 1000000);
+];
+export const DEVICE_NAME =
+	'e2e-test-device' + Math.floor(Math.random() * 1000000);
 interface QrCode {
 	pairingId: string;
 	webEncPublicKey: string;
@@ -24,7 +33,7 @@ afterAll(() => {
 	simulator.cleanUpSimulation();
 });
 
-describe('onRpcRequest', () => {
+describe('test rpc requests to Snap', () => {
 	describe('wrong permission and rejection', () => {
 		it('throws an error if origin does not have permission', async () => {
 			const { request } = await installSnap();
@@ -51,8 +60,7 @@ describe('onRpcRequest', () => {
 
 			expect(response).toRespondWithError({
 				code: -32603,
-				message:
-					"Origin 'https://snap.silencelaboratories.com' is not allowed to call 'foo'",
+				message: `Origin '${DAPP_URL_STAGING}' is not allowed to call 'foo'`,
 				stack: expect.any(String),
 			});
 		});
@@ -100,7 +108,7 @@ describe('onRpcRequest', () => {
 
 		it('tss_initPairing, tss_runPairing, tss_runKeygen should be success', async () => {
 			const { request } = await installSnap();
-
+			// Test init pairing
 			const initPairingReq = request({
 				method: InternalMethod.TssInitPairing,
 				origin: ORIGIN,
@@ -131,6 +139,7 @@ describe('onRpcRequest', () => {
 			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
 			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
 
+			// Test run pairing
 			await simulator.signIn();
 			await simulator.pairing(qrCode);
 
@@ -145,6 +154,7 @@ describe('onRpcRequest', () => {
 			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
 			expect(runPairingResult.address).toBeNull();
 
+			// Test key generation
 			const keygenReq = request({
 				method: InternalMethod.TssRunKeygen,
 				origin: ORIGIN,
@@ -155,10 +165,128 @@ describe('onRpcRequest', () => {
 			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
 			expect(runKeyGenResult.address).toEqual(expect.any(String));
 
-			simulator.backup();
+			// Test signing
+			const keyshareReq = request({
+				method: InternalMethod.E2eTestGetKeyShare,
+				origin: ORIGIN,
+			});
+			const keyshareReqJson: any = (await keyshareReq).response;
+			const keyshareResult = keyshareReqJson.result as {
+				distributedKey: DistributedKey;
+				pairingData: PairingData;
+			};
+
+			const accountId = keyshareResult.distributedKey.accountId;
+			const keyring = new SimpleKeyring({
+				wallets: {
+					[accountId]: {
+						account: {
+							id: 'f4211653-1b5f-4497-b5e6-f7b56824ba21',
+							options: {},
+							address:
+								'0x660265edc169bab511a40c0e049cc1e33774443d',
+							methods: [
+								'eth_sign',
+								'eth_signTransaction',
+								'eth_signTypedData_v1',
+								'eth_signTypedData_v3',
+								'eth_signTypedData_v4',
+								'personal_sign',
+							],
+							type: 'eip155:eoa',
+						},
+						distributedKey: keyshareResult.distributedKey,
+					},
+				},
+				requests: {},
+			});
+
+			const mockTx = {
+				type: '0x2',
+				nonce: '0x1',
+				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
+				from: '0x660265edc169bab511a40c0e049cc1e33774443d',
+				value: '0x0',
+				data: '0x',
+				gasLimit: '0x5208',
+				maxPriorityFeePerGas: '0x3b9aca00',
+				maxFeePerGas: '0x2540be400',
+				accessList: [],
+				chainId: '0xaa36a7',
+			};
+			const pairingData = keyshareResult.pairingData;
+			const runSign = async (
+				hashAlg: string,
+				message: string,
+				messageHashHex: string,
+				signMetadata: SignMetadata,
+				accountId: number,
+				keyShare: IP1KeyShare,
+			) => {
+				if (messageHashHex.startsWith('0x')) {
+					messageHashHex = messageHashHex.slice(2);
+				}
+				if (message.startsWith('0x')) {
+					message = message.slice(2);
+				}
+
+				// TODO: Do we want to simulate token expiration?
+				// let silentShareStorage = await getSilentShareStorage();
+				// let pairingData = silentShareStorage.pairingData;
+				// if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
+				// 	pairingData = await refreshPairing();
+				// }
+				let messageHash = fromHexStringToBytes(messageHashHex);
+				if (messageHash.length !== 32) {
+					throw new SnapError(
+						'Invalid length of messageHash, should be 32 bytes',
+						SnapErrorCode.InvalidMessageHashLength,
+					);
+				}
+
+				return await SignAction.sign(
+					pairingData,
+					keyShare,
+					hashAlg,
+					message,
+					messageHash,
+					signMetadata,
+					accountId,
+				);
+			};
+			let signResult: any = null;
+			keyring
+				.signTransaction(mockTx, runSign)
+				.then(async (resp: any) => {
+					signResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			await simulator.sign();
+
+			while (!signResult) {
+				console.log('waiting for signing result');
+			}
+			expect(signResult.from).toEqual(mockTx.from);
+			const common = Common.custom(
+				{ chainId: signResult.chainId },
+				{
+					hardfork:
+						signResult.maxPriorityFeePerGas ||
+						signResult.maxFeePerGas
+							? Hardfork.London
+							: Hardfork.Istanbul,
+				},
+			);
+			var tx = TransactionFactory.fromTxData(signResult, {
+				common,
+			});
+			expect(tx.verifySignature()).toEqual(true);
 		});
 
 		it('tss_unpair should be success', async () => {
+			simulator.backup();
 			const { request } = await installSnap();
 			const unpairReq = request({
 				method: InternalMethod.TssUnPair,

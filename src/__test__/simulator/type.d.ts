@@ -21,3 +21,12 @@ interface SnapVersionResponse {
 	currentVersion: string;
 	latestVersion: string;
 }
+
+type RunSign = (
+    hashAlg: string,
+    message: string,
+    messageHashHex: string,
+    signMetadata: SignMetadata,
+    accountId: number,
+    keyShare: IP1KeyShare,
+) => Promise<any>; 
