@@ -246,7 +246,6 @@ class sdk2 {
 							message.nonce
 						) {
 							if (p2 === null || p2._state === 0) {
-								console.log('sim conversation', conversation);
 								let messageHash;
 								if (conversation.hashAlg === 'keccak256')
 									messageHash = keccak256(
@@ -266,23 +265,14 @@ class sdk2 {
 								if (messageHash.startsWith('0x')) {
 									messageHash = messageHash.slice(2);
 								}
+								round = 1;
 								p2 = new P2Signature(
 									conversation.sessionId,
 									fromHexStringToBytes(messageHash),
 									this.keyshare,
 								);
-							// 	console.log('p2 should be null');
 							}
 							
-							// console.log('p2._state', p2._state);
-							// console.log(
-							// 	'sim webEncPublicKey',
-							// 	_sodium.to_hex(this.webEncPublicKey),
-							// );
-							// console.log(
-							// 	'sim phoneEncPrivateKey',
-							// 	_sodium.to_hex(this.phoneEncPrivateKey),
-							// );
 
 							const decMessage = uint8ArrayToUtf8String(
 								_sodium.crypto_box_open_easy(
@@ -293,7 +283,6 @@ class sdk2 {
 								),
 							);
 							const decodedMessage = b64ToString(decMessage);
-							// console.log('sim decodedMessage', decodedMessage);
 							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
 								const nonce = _sodium.randombytes_buf(

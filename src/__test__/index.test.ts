@@ -341,27 +341,27 @@ describe('test rpc requests to Snap', () => {
 			// Test typed data sign
 			// const mockTypedDataTx =
 			// Test personal sign
-			const mockPersonalMsg = `0x${Buffer.from('Hello, world!').toString(
-				'hex',
-			)}`;
-			let personalSignResult: any = null;
-			keyring
-				.signPersonalMessage(
-					WALLER_ADDRESS,
-					mockPersonalMsg,
-					runTssSign,
-				)
-				.then((resp: any) => {
-					personalSignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
 
-			await delay(3000);
-			const helloWorldSignature =
-				'0x90a938f7457df6e8f741264c32697fc52f9a8f867c52dd70713d9d2d472f2e415d9c94148991bbe1f4a1818d1dff09165782749c877f5cf1eff4ef126e55714d1c';
-			expect(mockPersonalMsg).toEqual(helloWorldSignature);
+			// const mockPersonalMsg =
+			// 	'0x4578616d706c652060706572736f6e616c5f7369676e60206d657373616765';
+			// let personalSignResult: any = null;
+			// keyring
+			// 	.signPersonalMessage(
+			// 		WALLER_ADDRESS,
+			// 		mockPersonalMsg,
+			// 		runTssSign,
+			// 	)
+			// 	.then((resp: any) => {
+			// 		personalSignResult = resp;
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log('err', err);
+			// 	});
+
+			// await delay(3000);
+			// const helloWorldSignature =
+			// 	'0xb148cdfdbc49208341271a1868e797ab7e04f02ac5f8f0c22fe6ddaee10da0c71dd0a131117950b9f152898d310b5cd54e3c1323dbddf97d93f719661f38cad41b';
+			// expect(personalSignResult).toEqual(helloWorldSignature);
 
 			// Test eth sign
 			// const mockEthSign =

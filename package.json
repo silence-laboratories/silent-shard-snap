@@ -38,7 +38,7 @@
     "lint:types": "tsc --noEmit",
     "serve": "mm-snap serve",
     "start": "NODE_ENV='staging' node ./scripts/pre-publish.js && mm-snap watch -c ./snap.staging.config.ts",
-    "test": "yarn prepublish:stg && jest"
+    "test": "yarn prepublish:stg && jest -i"
   },
   "dependencies": {
     "@ethereumjs/common": "^3.1.2",
