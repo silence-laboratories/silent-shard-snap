@@ -68,8 +68,6 @@ class sdk2 {
 		return false;
 	};
 
-	public checkBackup = () => {};
-
 	public sendPairing = async (qrCode: string, isRepair = false) => {
 		try {
 			const encPair = _sodium.crypto_box_keypair();
@@ -197,6 +195,7 @@ class sdk2 {
 			);
 		});
 		if (this.unSub) {
+			console.log("keygen unsub");
 			this.unSub();
 		}
 	};
@@ -219,7 +218,6 @@ class sdk2 {
 		let round = 1;
 		await new Promise<string | null>((resolve) => {
 			this.unSub = onSnapshot(
-				
 				doc(db, 'sign', this.pairingId!),
 				async (querySnapshot) => {
 					const conversation =
@@ -318,6 +316,11 @@ class sdk2 {
 						}
 					}
 				},
+				(error) => {
+					if(this.unSub) {
+						this.unSub();
+					}
+				}
 			);
 		});
 	};
@@ -330,6 +333,7 @@ class sdk2 {
 				if (conversation?.backupData) {
 					this.backupData = conversation.backupData;
 					if (this.unSub) {
+						console.log("backup unsub");
 						this.unSub();
 					}
 				}

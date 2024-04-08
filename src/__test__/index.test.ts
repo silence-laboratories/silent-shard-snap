@@ -257,8 +257,8 @@ describe('test rpc requests to Snap', () => {
 				accessList: [],
 				chainId: '0xaa36a7',
 			};
-			let eip1559SignResult: any = null;
 
+			let eip1559SignResult: any = null;
 			keyring
 				.signTransaction(mockEip1559Tx, runTssSign)
 				.then((resp: any) => {
@@ -269,7 +269,10 @@ describe('test rpc requests to Snap', () => {
 				});
 			await simulator.sign();
 
-			await delay(1000);
+			while (!eip1559SignResult) {
+				await delay(0);
+				console.log('waiting for eip1559SignResult');
+			}
 
 			for (const key in mockEip1559Tx) {
 				if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
@@ -305,18 +308,10 @@ describe('test rpc requests to Snap', () => {
 				chainId: '0xaa36a7',
 			};
 
-			let legacySignResult: any = null;
-			keyring
-				.signTransaction(mockLegacyTx, runTssSign)
-				.then((resp: any) => {
-					legacySignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
-
-			await delay(3000);
-
+			let legacySignResult: any = await keyring.signTransaction(
+				mockLegacyTx,
+				runTssSign,
+			);
 			for (const key in mockLegacyTx) {
 				if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
 					expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
@@ -341,24 +336,17 @@ describe('test rpc requests to Snap', () => {
 			// Test typed data sign
 			// const mockTypedDataTx =
 			// Test personal sign
-
 			// const mockPersonalMsg =
 			// 	'0x4578616d706c652060706572736f6e616c5f7369676e60206d657373616765';
 			// let personalSignResult: any = null;
-			// keyring
+			// let personalSignResult: any = await keyring
 			// 	.signPersonalMessage(
 			// 		WALLER_ADDRESS,
 			// 		mockPersonalMsg,
 			// 		runTssSign,
 			// 	)
-			// 	.then((resp: any) => {
-			// 		personalSignResult = resp;
-			// 	})
-			// 	.catch((err) => {
-			// 		console.log('err', err);
-			// 	});
+			// 	console.log(personalSignResult);
 
-			// await delay(3000);
 			// const helloWorldSignature =
 			// 	'0xb148cdfdbc49208341271a1868e797ab7e04f02ac5f8f0c22fe6ddaee10da0c71dd0a131117950b9f152898d310b5cd54e3c1323dbddf97d93f719661f38cad41b';
 			// expect(personalSignResult).toEqual(helloWorldSignature);
