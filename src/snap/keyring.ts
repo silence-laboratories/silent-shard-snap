@@ -351,7 +351,6 @@ export class SimpleKeyring implements Keyring {
 			r: '0x' + r,
 			s: '0x' + s,
 		};
-		console.log('signTransaction serializedTx', serializedTx);
 		return serializedTx;
 	}
 
@@ -379,10 +378,6 @@ export class SimpleKeyring implements Keyring {
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
 		);
-		console.log(
-			'signTypedData signature',
-			'0x' + signature + (recId + 27).toString(16),
-		);
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
@@ -400,10 +395,6 @@ export class SimpleKeyring implements Keyring {
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
 		);
-		console.log(
-			'signPersonalMessage signature',
-			'0x' + signature + (recId + 27).toString(16),
-		);
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
@@ -411,17 +402,13 @@ export class SimpleKeyring implements Keyring {
 		const message = stripHexPrefix(data);
 		const messageHash = keccak256('0x' + message).toString('hex');
 		const wallet = this.#getWalletByAddress(from);
-		const { signature, recId } = await runSign(
+		const { signature, recId } = await runTssSign(
 			'keccak256',
 			message,
 			messageHash,
 			'eth_sign',
 			wallet.distributedKey.accountId,
 			wallet.distributedKey.keyShareData,
-		);
-		console.log(
-			'signMessage signature',
-			'0x' + signature + (recId + 27).toString(16),
 		);
 		return '0x' + signature + (recId + 27).toString(16);
 	}

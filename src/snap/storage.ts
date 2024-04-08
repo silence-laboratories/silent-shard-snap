@@ -41,7 +41,6 @@ const deleteStorage = async () => {
  * @param data obj to save
  */
 const saveSilentShareStorage = async (data: StorageData) => {
-	console.log("-saveSilentShareStorage");
 	try {
 		if (data == null) {
 			throw new SnapError(
@@ -59,9 +58,7 @@ const saveSilentShareStorage = async (data: StorageData) => {
 			method: 'snap_manageState',
 			params: { operation: 'update', newState: state },
 		});
-	console.log("+saveSilentShareStorage");
 	} catch (error) {
-		console.log("saveSilentShareStorage error", error);
 		throw error instanceof Error
 			? new SnapError(error.message, SnapErrorCode.StorageError)
 			: new SnapError(`unknown-error`, SnapErrorCode.UnknownError);

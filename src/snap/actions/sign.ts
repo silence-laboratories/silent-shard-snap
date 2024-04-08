@@ -43,7 +43,6 @@ export const sign = async (
 		let p1KeyShareObj = keyShare;
 		let round = 1;
 		const p1 = new P1Signature(sessionId, messageHash, p1KeyShareObj);
-
 		let signConversation: SignConversation = {
 			signMetadata,
 			accountId,
@@ -92,6 +91,7 @@ export const sign = async (
 						SnapErrorCode.InternalLibError,
 					);
 				});
+
 			if (msg.signature && msg.recid !== undefined) {
 				sign = msg.signature;
 				recId = msg.recid;
