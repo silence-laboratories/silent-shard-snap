@@ -9,7 +9,7 @@ import * as simulator from './simulator';
 import { SimpleKeyring } from '../snap/keyring';
 import { DistributedKey, PairingData, SignMetadata, Wallet } from '../types';
 import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
-import { fromHexStringToBytes } from '../snap/utils';
+import { delay, fromHexStringToBytes } from '../snap/utils';
 import * as SignAction from '../snap/actions/sign';
 import { TransactionFactory } from '@ethereumjs/tx';
 import { Common, Hardfork } from '@ethereumjs/common';
@@ -21,6 +21,8 @@ const INIT_PAIR_PANEL_DESCRIPTION = [
 	`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
 	`Happy to have you onboard! 🥳`,
 ];
+const WALLER_ADDRESS = '0x660265edc169bab511a40c0e049cc1e33774443d';
+
 export const DEVICE_NAME =
 	'e2e-test-device' + Math.floor(Math.random() * 1000000);
 interface QrCode {
@@ -183,8 +185,7 @@ describe('test rpc requests to Snap', () => {
 						account: {
 							id: 'f4211653-1b5f-4497-b5e6-f7b56824ba21',
 							options: {},
-							address:
-								'0x660265edc169bab511a40c0e049cc1e33774443d',
+							address: WALLER_ADDRESS,
 							methods: [
 								'eth_sign',
 								'eth_signTransaction',
@@ -202,7 +203,7 @@ describe('test rpc requests to Snap', () => {
 			});
 
 			const pairingData = keyshareResult.pairingData;
-			const runSign = async (
+			const runTssSign = async (
 				hashAlg: string,
 				message: string,
 				messageHashHex: string,
@@ -247,7 +248,7 @@ describe('test rpc requests to Snap', () => {
 				type: '0x2',
 				nonce: '0x1',
 				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
-				from: '0x660265edc169bab511a40c0e049cc1e33774443d',
+				from: WALLER_ADDRESS,
 				value: '0x0',
 				data: '0x',
 				gasLimit: '0x5208',
@@ -256,49 +257,114 @@ describe('test rpc requests to Snap', () => {
 				accessList: [],
 				chainId: '0xaa36a7',
 			};
-			let signResult: any = null;
+			let eip1559SignResult: any = null;
+
 			keyring
-				.signTransaction(mockEip1559Tx, runSign)
-				.then(async (resp: any) => {
-					signResult = resp;
+				.signTransaction(mockEip1559Tx, runTssSign)
+				.then((resp: any) => {
+					eip1559SignResult = resp;
 				})
 				.catch((err) => {
 					console.log('err', err);
 				});
 			await simulator.sign();
 
-			while (!signResult) {
-				console.log('waiting for signing result');
-			}
+			await delay(1000);
 
 			for (const key in mockEip1559Tx) {
 				if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
-					expect(signResult[key]).toEqual(mockEip1559Tx[key]);
+					expect(eip1559SignResult[key]).toEqual(mockEip1559Tx[key]);
 				}
 			}
 
 			const common = Common.custom(
-				{ chainId: signResult.chainId },
+				{ chainId: eip1559SignResult.chainId },
 				{
 					hardfork:
-						signResult.maxPriorityFeePerGas ||
-						signResult.maxFeePerGas
+						eip1559SignResult.maxPriorityFeePerGas ||
+						eip1559SignResult.maxFeePerGas
 							? Hardfork.London
 							: Hardfork.Istanbul,
 				},
 			);
-			var tx = TransactionFactory.fromTxData(signResult, {
+			let eip1559tx = TransactionFactory.fromTxData(eip1559SignResult, {
 				common,
 			});
-			expect(tx.verifySignature()).toEqual(true);
+			expect(eip1559tx.verifySignature()).toEqual(true);
 
 			// Test legacy signing
+			const mockLegacyTx: any = {
+				type: '0x0',
+				nonce: '0x0',
+				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
+				from: WALLER_ADDRESS,
+				value: '0x0',
+				data: '0x',
+				gasLimit: '0x5208',
+				gasPrice: '0x2540be400',
+				chainId: '0xaa36a7',
+			};
 
-			// Test typed data sign 
+			let legacySignResult: any = null;
+			keyring
+				.signTransaction(mockLegacyTx, runTssSign)
+				.then((resp: any) => {
+					legacySignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
 
+			await delay(3000);
+
+			for (const key in mockLegacyTx) {
+				if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
+					expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
+				}
+			}
+
+			const commonLegacy = Common.custom(
+				{ chainId: legacySignResult.chainId },
+				{
+					hardfork:
+						legacySignResult.maxPriorityFeePerGas ||
+						legacySignResult.maxFeePerGas
+							? Hardfork.London
+							: Hardfork.Istanbul,
+				},
+			);
+			let legacyTx = TransactionFactory.fromTxData(legacySignResult, {
+				common: commonLegacy,
+			});
+			expect(legacyTx.verifySignature()).toEqual(true);
+
+			// Test typed data sign
+			// const mockTypedDataTx =
 			// Test personal sign
+			const mockPersonalMsg = `0x${Buffer.from('Hello, world!').toString(
+				'hex',
+			)}`;
+			let personalSignResult: any = null;
+			keyring
+				.signPersonalMessage(
+					WALLER_ADDRESS,
+					mockPersonalMsg,
+					runTssSign,
+				)
+				.then((resp: any) => {
+					personalSignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+
+			await delay(3000);
+			const helloWorldSignature =
+				'0x90a938f7457df6e8f741264c32697fc52f9a8f867c52dd70713d9d2d472f2e415d9c94148991bbe1f4a1818d1dff09165782749c877f5cf1eff4ef126e55714d1c';
+			expect(mockPersonalMsg).toEqual(helloWorldSignature);
 
 			// Test eth sign
+			// const mockEthSign =
 		});
 
 		it('tss_unpair should be success', async () => {
