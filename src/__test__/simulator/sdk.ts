@@ -35,6 +35,20 @@ class sdk2 {
 	private backupData?: string;
 	private uid?: string | undefined;
 	private pairingId?: string | undefined;
+
+	public cleanState = () => {
+		delete this.phoneEncPrivateKey;
+		delete this.phoneEncPublicKey;
+		delete this.webEncPublicKey;
+		delete this.keyshare;
+		delete this.backupData;
+		delete this.uid;
+		delete this.pairingId;
+		if (this.unSub) {
+			this.unSub();
+		}
+	};
+
 	private unSub?: () => any;
 
 	public setUid(theUid: string | undefined) {
@@ -203,8 +217,9 @@ class sdk2 {
 		}
 		let p2: P2Signature | null = null;
 		let round = 1;
-		const result = await new Promise<string | null>((resolve, reject) => {
+		await new Promise<string | null>((resolve) => {
 			this.unSub = onSnapshot(
+				
 				doc(db, 'sign', this.pairingId!),
 				async (querySnapshot) => {
 					const conversation =
@@ -230,7 +245,8 @@ class sdk2 {
 							message.message &&
 							message.nonce
 						) {
-							if (p2 === null) {
+							if (p2 === null || p2._state === 0) {
+								console.log('sim conversation', conversation);
 								let messageHash;
 								if (conversation.hashAlg === 'keccak256')
 									messageHash = keccak256(
@@ -255,7 +271,19 @@ class sdk2 {
 									fromHexStringToBytes(messageHash),
 									this.keyshare,
 								);
+							// 	console.log('p2 should be null');
 							}
+							
+							// console.log('p2._state', p2._state);
+							// console.log(
+							// 	'sim webEncPublicKey',
+							// 	_sodium.to_hex(this.webEncPublicKey),
+							// );
+							// console.log(
+							// 	'sim phoneEncPrivateKey',
+							// 	_sodium.to_hex(this.phoneEncPrivateKey),
+							// );
+
 							const decMessage = uint8ArrayToUtf8String(
 								_sodium.crypto_box_open_easy(
 									b64ToUint8Array(message.message),
@@ -265,6 +293,7 @@ class sdk2 {
 								),
 							);
 							const decodedMessage = b64ToString(decMessage);
+							// console.log('sim decodedMessage', decodedMessage);
 							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
 								const nonce = _sodium.randombytes_buf(
@@ -302,9 +331,6 @@ class sdk2 {
 				},
 			);
 		});
-		if (this.unSub) {
-			this.unSub();
-		}
 	};
 
 	public backup = () => {
@@ -320,12 +346,6 @@ class sdk2 {
 				}
 			},
 		);
-	};
-
-	public stop = () => {
-		if (this.unSub) {
-			this.unSub();
-		}
 	};
 }
 
