@@ -5,7 +5,7 @@ import { SnapError, SnapErrorCode } from './error';
 
 const baseUrl = process.env.IS_PRODUCTION
 	? 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net'
-	: 'https://us-central1-mobile-wallet-mm-snap-staging.cloudfunctions.net';
+	: 'https://cloudfunction.silencelaboratories.com';
 
 interface Response {
 	response: any;
@@ -38,7 +38,7 @@ export const getTokenEndpoint = async (
 	pairingId: string,
 	signature: string,
 ) => {
-	const url = baseUrl + `/getToken`;
+	const url = baseUrl + `/gettoken`;
 	const data: {
 		token: string;
 		appPublicKey: string;
@@ -59,7 +59,7 @@ export const refreshTokenEndpoint = async (
 	token: string,
 	signedToken: string,
 ) => {
-	const url = baseUrl + `/refreshToken`;
+	const url = baseUrl + `/refreshtoken`;
 	const data: {
 		token: string;
 		tokenExpiration: number;
@@ -83,7 +83,7 @@ export const sendMessage = async <T>(
 	expectResponse: boolean,
 	docId?: string,
 ) => {
-	const url = baseUrl + `/sendMessage`;
+	const url = baseUrl + `/sendmessage`;
 	const data: T | null = await modifiedFetch(url, {
 		method: 'POST',
 		headers: {
@@ -101,7 +101,7 @@ export const sendMessage = async <T>(
 };
 
 export const snapVersion = async () => {
-	const url = baseUrl + `/snapVersion`;
+	const url = baseUrl + `/snapversion`;
 	const data = await fetch(url);
 	return await data.text();
 };
