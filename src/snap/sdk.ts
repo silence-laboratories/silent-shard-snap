@@ -48,7 +48,7 @@ async function initPairing() {
 }
 
 async function runPairing() {
-	let result = await PairingAction.getToken();
+	let result = await PairingAction.getPairingSessionData();
 	await saveSilentShareStorage({
 		newPairingState: result.newPairingState,
 		pairingData: result.newPairingState.pairingData,
@@ -56,6 +56,7 @@ async function runPairing() {
 		requests: {},
 	});
 	const distributedKey = result.newPairingState.distributedKey;
+	
 	return {
 		pairingStatus: 'paired',
 		newAccountAddress: distributedKey
@@ -77,7 +78,7 @@ async function runRePairing() {
 		currentAccount?.distributedKey,
 	);
 
-	let result = await PairingAction.getToken(currentAccountAddress);
+	let result = await PairingAction.getPairingSessionData(currentAccountAddress);
 
 	const distributedKey = result.newPairingState.distributedKey;
 	const newAccountAddress = distributedKey
@@ -118,13 +119,17 @@ async function refreshPairing() {
 	return result.newPairingData;
 }
 
-async function runKeygen() {
+async function getPairingDataAndStorage() {
 	let silentShareStorage: StorageData = await getSilentShareStorage();
 	let pairingData = silentShareStorage.pairingData;
-	// Refresh token if it is expired
 	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
 		pairingData = await refreshPairing();
 	}
+	return { pairingData, silentShareStorage };
+}
+
+async function runKeygen() {
+	let {pairingData, silentShareStorage} = await getPairingDataAndStorage();
 	let wallets = silentShareStorage.wallets;
 	let accountId = Object.keys(wallets).length + 1;
 	let x1 = fromHexStringToBytes(await requestEntropy());
@@ -152,14 +157,10 @@ async function runKeygen() {
 }
 
 async function runBackup() {
-	let silentShareStorage: StorageData = await getSilentShareStorage();
+	let {pairingData, silentShareStorage} = await getPairingDataAndStorage();
 	const encryptedMessage = await encMessage(
 		JSON.stringify(silentShareStorage.newPairingState?.distributedKey),
 	);
-	let pairingData = silentShareStorage.pairingData;
-	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
-		pairingData = await refreshPairing();
-	}
 	await Backup.backup(pairingData, encryptedMessage);
 }
 
@@ -177,11 +178,7 @@ async function runSign(
 	if (message.startsWith('0x')) {
 		message = message.slice(2);
 	}
-	let silentShareStorage = await getSilentShareStorage();
-	let pairingData = silentShareStorage.pairingData;
-	if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
-		pairingData = await refreshPairing();
-	}
+	let {pairingData} = await getPairingDataAndStorage();
 	let messageHash = fromHexStringToBytes(messageHashHex);
 	if (messageHash.length !== 32) {
 		throw new SnapError(

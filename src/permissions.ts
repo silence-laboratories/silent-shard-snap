@@ -11,6 +11,7 @@ export enum InternalMethod {
 	TssUnPair = 'tss_unpair',
 	TssSnapVersion = 'tss_snapVersion',
 	TssRunRePairing = 'tss_runRePairing',
+	E2eTestGetKeyShare = 'e2e_test_getKeyShare',
 }
 
 export enum SigningMethods {
@@ -19,6 +20,9 @@ export enum SigningMethods {
 	SignPersonalMessage = 'personal_sign',
 	EthSign = 'eth_sign',
 }
+
+export const DAPP_URL_PROD = 'https://snap.silencelaboratories.com';
+export const DAPP_URL_STAGING = 'https://snap-staging.silencelaboratories.com';
 
 export const PERMISSIONS = new Map<string, string[]>([
 	[
@@ -38,7 +42,7 @@ export const PERMISSIONS = new Map<string, string[]>([
 		],
 	],
 	[
-		'https://snap.silencelaboratories.com',
+		DAPP_URL_PROD,
 		[
 			KeyringRpcMethod.ListAccounts,
 			KeyringRpcMethod.GetAccount,
@@ -58,7 +62,7 @@ export const PERMISSIONS = new Map<string, string[]>([
 /** THIS SHOULD BE USED FOR DEVELOPMENT ONLY */
 export const STAGING_PERMISSIONS = new Map<string, string[]>([
 	[
-		'https://snap-staging.silencelaboratories.com/',
+		DAPP_URL_STAGING,
 		[
 			KeyringRpcMethod.ListAccounts,
 			KeyringRpcMethod.GetAccount,
@@ -71,6 +75,7 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
 			InternalMethod.TssRunRePairing,
+			InternalMethod.E2eTestGetKeyShare
 		],
 	],
 	[
