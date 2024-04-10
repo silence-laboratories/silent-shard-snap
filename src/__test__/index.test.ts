@@ -93,7 +93,7 @@ describe('test rpc requests to Snap', () => {
 		});
 	});
 
-	describe('pairing and key generation', () => {
+	describe('pairing, key generation, signing', () => {
 		it('tss_isPaired should be failed before pairing', async () => {
 			const { request } = await installSnap();
 
@@ -108,7 +108,7 @@ describe('test rpc requests to Snap', () => {
 			});
 		});
 
-		it('tss_initPairing, tss_runPairing, tss_runKeygen should be success', async () => {
+		it('tss_initPairing, tss_runPairing, tss_runKeygen, eip1559 + legacy transaction signing should be success', async () => {
 			const { request } = await installSnap();
 			// Test init pairing
 			const initPairingReq = request({
@@ -338,7 +338,6 @@ describe('test rpc requests to Snap', () => {
 			// Test personal sign
 			// const mockPersonalMsg =
 			// 	'0x4578616d706c652060706572736f6e616c5f7369676e60206d657373616765';
-			// let personalSignResult: any = null;
 			// let personalSignResult: any = await keyring
 			// 	.signPersonalMessage(
 			// 		WALLER_ADDRESS,

@@ -199,6 +199,9 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			};
 
 		case InternalMethod.E2eTestGetKeyShare:
+			if (process.env.IS_PRODUCTION) {
+				return null;
+			}
 			let silentShareStorage: StorageData = await getSilentShareStorage();
 			return {
 				distributedKey:

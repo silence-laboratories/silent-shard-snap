@@ -44,12 +44,13 @@ class sdk2 {
 		delete this.backupData;
 		delete this.uid;
 		delete this.pairingId;
-		if (this.unSub) {
-			this.unSub();
+		if (this.signUnSub) {
+			this.signUnSub();
+			delete this.signUnSub;
 		}
 	};
 
-	private unSub?: () => any;
+	private signUnSub?: () => any;
 
 	public setUid(theUid: string | undefined) {
 		this.uid = theUid;
@@ -111,8 +112,9 @@ class sdk2 {
 		}
 		let p2: P2KeyGen | null = null;
 		let round = 1;
-		await new Promise<void>((resolve, reject) => {
-			this.unSub = onSnapshot(
+		let keygenUnsub: any;
+		await new Promise<void>((resolve) => {
+			keygenUnsub = onSnapshot(
 				doc(db, 'keygen', this.pairingId!),
 				async (querySnapshot) => {
 					const conversation =
@@ -194,9 +196,9 @@ class sdk2 {
 				},
 			);
 		});
-		if (this.unSub) {
+		if (keygenUnsub) {
 			console.log("keygen unsub");
-			this.unSub();
+			keygenUnsub();
 		}
 	};
 
@@ -217,7 +219,7 @@ class sdk2 {
 		let p2: P2Signature | null = null;
 		let round = 1;
 		await new Promise<string | null>((resolve) => {
-			this.unSub = onSnapshot(
+			this.signUnSub = onSnapshot(
 				doc(db, 'sign', this.pairingId!),
 				async (querySnapshot) => {
 					const conversation =
@@ -317,8 +319,8 @@ class sdk2 {
 					}
 				},
 				(error) => {
-					if(this.unSub) {
-						this.unSub();
+					if(this.signUnSub) {
+						this.signUnSub();
 					}
 				}
 			);
@@ -326,15 +328,16 @@ class sdk2 {
 	};
 
 	public backup = () => {
-		this.unSub = onSnapshot(
+		let backupUnsub: any;
+		backupUnsub = onSnapshot(
 			doc(db, 'backup', this.pairingId!),
 			async (querySnapshot) => {
 				const conversation = querySnapshot.data() as BackupConversation;
 				if (conversation?.backupData) {
 					this.backupData = conversation.backupData;
-					if (this.unSub) {
+					if (backupUnsub) {
 						console.log("backup unsub");
-						this.unSub();
+						backupUnsub();
 					}
 				}
 			},

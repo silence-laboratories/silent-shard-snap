@@ -31,6 +31,7 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 
 - Use [a Jest preset](https://github.com/MetaMask/snaps/tree/main/packages/snaps-jest) for end-to-end testing MetaMask Snaps.
 - Run `yarn test` or `yarn test --coverage` to see test result and coverage.
+- While you see this warning `@firebase/firestore: Firestore (9.23.0): GrpcConnection RPC 'Listen' stream 0x1ce2204b error. Code: 1 Message: 1 CANCELLED: Disconnecting idle stream. Timed out waiting for new targets.` after running the test, its due to: https://github.com/jestjs/jest/issues/11464 
 
 ## Debugging
 
