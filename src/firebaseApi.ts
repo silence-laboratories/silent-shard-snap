@@ -5,9 +5,7 @@ import { SnapError, SnapErrorCode } from './error';
 
 const baseUrl = process.env.IS_PRODUCTION
 	? 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net'
-	: 'https://us-central1-mobile-wallet-mm-snap-staging.cloudfunctions.net';
-
-// 'https://cloudfunction.silencelaboratories.com';
+	: 'https://cloudfunction.silencelaboratories.com';
 
 interface Response {
 	response: any;
