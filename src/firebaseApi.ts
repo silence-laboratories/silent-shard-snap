@@ -38,7 +38,7 @@ export const getTokenEndpoint = async (
 	pairingId: string,
 	signature: string,
 ) => {
-	const url = baseUrl + `/gettoken`;
+	const url = baseUrl + `/getToken`;
 	const data: {
 		token: string;
 		appPublicKey: string;
@@ -59,7 +59,7 @@ export const refreshTokenEndpoint = async (
 	token: string,
 	signedToken: string,
 ) => {
-	const url = baseUrl + `/refreshtoken`;
+	const url = baseUrl + `/refreshToken`;
 	const data: {
 		token: string;
 		tokenExpiration: number;
@@ -83,7 +83,7 @@ export const sendMessage = async <T>(
 	expectResponse: boolean,
 	docId?: string,
 ) => {
-	const url = baseUrl + `/sendmessage`;
+	const url = baseUrl + `/sendMessage`;
 	const data: T | null = await modifiedFetch(url, {
 		method: 'POST',
 		headers: {
@@ -101,7 +101,7 @@ export const sendMessage = async <T>(
 };
 
 export const snapVersion = async () => {
-	const url = baseUrl + `/snapversion`;
+	const url = baseUrl + `/snapVersion`;
 	const data = await fetch(url);
 	return await data.text();
 };
