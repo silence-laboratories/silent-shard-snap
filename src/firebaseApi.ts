@@ -4,8 +4,8 @@
 import { SnapError, SnapErrorCode } from './error';
 
 const baseUrl = process.env.IS_PRODUCTION
-	? 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net'
-	: 'https://cloudfunction.silencelaboratories.com';
+	? 'https://cloudfuntion-prod.silencelaboratories.com'
+	: 'https://cloudfuntion-stage.silencelaboratories.com';
 
 interface Response {
 	response: any;
