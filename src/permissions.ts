@@ -11,6 +11,7 @@ export enum InternalMethod {
 	TssUnPair = 'tss_unpair',
 	TssSnapVersion = 'tss_snapVersion',
 	TssRunRePairing = 'tss_runRePairing',
+	TssUpdateSnap = 'tss_updateSnap',
 	E2eTestGetKeyShare = 'e2e_test_getKeyShare',
 }
 
@@ -55,8 +56,9 @@ export const PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
 			InternalMethod.TssRunRePairing,
+			InternalMethod.TssUpdateSnap,
 		],
-	]
+	],
 ]);
 
 /** THIS SHOULD BE USED FOR DEVELOPMENT ONLY */
@@ -75,7 +77,8 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
 			InternalMethod.TssRunRePairing,
-			InternalMethod.E2eTestGetKeyShare
+			InternalMethod.TssUpdateSnap,
+			InternalMethod.E2eTestGetKeyShare,
 		],
 	],
 	[
@@ -99,6 +102,7 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssRunKeygen,
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
+			InternalMethod.TssUpdateSnap,
 		],
 	],
 	[
@@ -122,6 +126,7 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssRunKeygen,
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
+			InternalMethod.TssUpdateSnap,
 		],
 	],
 ]);

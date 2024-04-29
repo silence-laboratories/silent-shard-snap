@@ -6,6 +6,7 @@ import * as PairingAction from './actions/pairing';
 import * as KeyGenAction from './actions/keygen';
 import * as SignAction from './actions/sign';
 import * as Backup from './actions/backup';
+import * as User from './actions/user';
 import { encMessage, requestEntropy } from './entropy';
 import { fromHexStringToBytes, getAddressFromDistributedKey } from './utils';
 import { saveSilentShareStorage, getSilentShareStorage } from './storage';
@@ -56,7 +57,6 @@ async function runPairing() {
 		requests: {},
 	});
 	const distributedKey = result.newPairingState.distributedKey;
-	
 	return {
 		pairingStatus: 'paired',
 		newAccountAddress: distributedKey
@@ -78,7 +78,9 @@ async function runRePairing() {
 		currentAccount?.distributedKey,
 	);
 
-	let result = await PairingAction.getPairingSessionData(currentAccountAddress);
+	let result = await PairingAction.getPairingSessionData(
+		currentAccountAddress,
+	);
 
 	const distributedKey = result.newPairingState.distributedKey;
 	const newAccountAddress = distributedKey
@@ -129,7 +131,7 @@ async function getPairingDataAndStorage() {
 }
 
 async function runKeygen() {
-	let {pairingData, silentShareStorage} = await getPairingDataAndStorage();
+	let { pairingData, silentShareStorage } = await getPairingDataAndStorage();
 	let wallets = silentShareStorage.wallets;
 	let accountId = Object.keys(wallets).length + 1;
 	let x1 = fromHexStringToBytes(await requestEntropy());
@@ -157,7 +159,7 @@ async function runKeygen() {
 }
 
 async function runBackup() {
-	let {pairingData, silentShareStorage} = await getPairingDataAndStorage();
+	let { pairingData, silentShareStorage } = await getPairingDataAndStorage();
 	const encryptedMessage = await encMessage(
 		JSON.stringify(silentShareStorage.newPairingState?.distributedKey),
 	);
@@ -178,7 +180,7 @@ async function runSign(
 	if (message.startsWith('0x')) {
 		message = message.slice(2);
 	}
-	let {pairingData} = await getPairingDataAndStorage();
+	let { pairingData } = await getPairingDataAndStorage();
 	let messageHash = fromHexStringToBytes(messageHashHex);
 	if (messageHash.length !== 32) {
 		throw new SnapError(
@@ -198,6 +200,11 @@ async function runSign(
 	);
 }
 
+async function updateSnap(snapVersion: string) {
+	let { pairingData } = await getPairingDataAndStorage();
+	await User.setSnapVersion(pairingData.token, snapVersion);
+}
+
 export {
 	initPairing,
 	runPairing,
@@ -208,4 +215,5 @@ export {
 	isPaired,
 	refreshPairing,
 	runRePairing,
+	updateSnap,
 };
