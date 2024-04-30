@@ -1,7 +1,7 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import { deleteStorage, isStorageExist } from './storage';
+import { deleteStorage } from './storage';
 import * as PairingAction from './actions/pairing';
 import * as KeyGenAction from './actions/keygen';
 import * as SignAction from './actions/sign';
@@ -200,7 +200,7 @@ async function runSign(
 	);
 }
 
-async function updateSnap(snapVersion: string) {
+async function setSnapVersion(snapVersion: string) {
 	let { pairingData } = await getPairingDataAndStorage();
 	await User.setSnapVersion(pairingData.token, snapVersion);
 }
@@ -215,5 +215,5 @@ export {
 	isPaired,
 	refreshPairing,
 	runRePairing,
-	updateSnap,
+	setSnapVersion,
 };
