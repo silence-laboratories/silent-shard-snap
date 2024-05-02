@@ -198,6 +198,10 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 				latestVersion: snapLatestVersion,
 			};
 
+		case InternalMethod.TssSetSnapVersion:
+			await sdk.setSnapVersion(SNAP_VERSION);
+			return;
+
 		case InternalMethod.E2eTestGetKeyShare:
 			if (process.env.IS_PRODUCTION) {
 				return null;

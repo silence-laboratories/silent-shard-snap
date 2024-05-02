@@ -78,7 +78,7 @@ export const refreshTokenEndpoint = async (
 
 export const sendMessage = async <T>(
 	token: string,
-	type: 'keygen' | 'sign' | 'pairing' | 'backup',
+	type: 'keygen' | 'sign' | 'pairing' | 'backup' | 'users',
 	conversation: T | null,
 	expectResponse: boolean,
 	docId?: string,
