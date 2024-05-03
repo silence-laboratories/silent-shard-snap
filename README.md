@@ -33,6 +33,10 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 - Run `yarn test` or `yarn test --coverage` to see test result and coverage.
 - While you see this warning `@firebase/firestore: Firestore (9.23.0): GrpcConnection RPC 'Listen' stream 0x1ce2204b error. Code: 1 Message: 1 CANCELLED: Disconnecting idle stream. Timed out waiting for new targets.` after running the test, its due to: https://github.com/jestjs/jest/issues/11464 
 
+## How to give force update for snap
+Update the minimum snap version required in firebase remote config ([Firebase remote config](https://console.firebase.google.com/project/mobile-wallet-mm-snap-staging/config/env/firebase)).
+You might need permission to open this.
+
 ## Debugging
 
 If you need to open the snap console, see steps [here](https://docs.metamask.io/guide/snaps-development-guide.html#debugging-your-snap)
