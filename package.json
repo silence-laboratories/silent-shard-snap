@@ -1,8 +1,8 @@
 {
 	"name": "@silencelaboratories/silent-shard-snap",
-	"version": "1.2.6",
+	"version": "1.2.7",
 	"author": "Silence Laboratories",
-    "license": "SEE LICENSE IN LICENSE.md",
+	"license": "SEE LICENSE IN LICENSE.md",
 	"description": "Distributed wallet between Metamask plugin and SilentShard mobile app",
 	"keywords": [
 		"metamask",
@@ -22,8 +22,13 @@
 		"snap.manifest.json"
 	],
 	"scripts": {
-		"build": "mm-snap build",
-		"build:clean": "yarn clean && yarn build",
+		"build": "yarn build:prod",
+		"build:prod": "mm-snap build -c ./snap.config.ts",
+		"build:stg": "mm-snap build -c ./snap.staging.config.ts",
+		"build:clean:prod": "yarn clean && yarn build:prod",
+		"build:clean:stg": "yarn clean && yarn build:stg",
+		"prepublish:prod": "NODE_ENV='production' node ./scripts/pre-publish.js && yarn install && yarn build:clean:prod",
+		"prepublish:stg": "NODE_ENV='staging' node ./scripts/pre-publish.js && yarn install && yarn build:clean:stg",
 		"clean": "rimraf dist",
 		"lint": "yarn lint:eslint && yarn lint:misc && yarn lint:deps && yarn lint:types",
 		"lint:deps": "depcheck",
@@ -32,7 +37,7 @@
 		"lint:misc": "prettier '**/*.json' '**/*.md' '!CHANGELOG.md' '!snap.manifest.json' --check",
 		"lint:types": "tsc --noEmit",
 		"serve": "mm-snap serve",
-		"start": "NODE_ENV='development' mm-snap watch"
+		"start": "mm-snap watch -c ./snap.staging.config.ts"
 	},
 	"dependencies": {
 		"@ethereumjs/common": "^3.1.2",
@@ -63,6 +68,7 @@
 		"@types/node": "^20.6.2",
 		"@typescript-eslint/eslint-plugin": "^5.33.0",
 		"@typescript-eslint/parser": "^5.33.0",
+		"chalk": "^4.1.2",
 		"depcheck": "^1.4.6",
 		"eslint": "^8.21.0",
 		"eslint-config-prettier": "^8.1.0",

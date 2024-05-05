@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.2.7] - 2024-03-15
+
+### Added
+
+- Add pairingRemark to handle failure cases [`#26`](https://github.com/silence-laboratories/silent-shard-snap/pull/26)
+- Complete set up script to build staging and production environment se… [`#24`](https://github.com/silence-laboratories/silent-shard-snap/pull/24)
+- Add copyright header to source files [`#20`](https://github.com/silence-laboratories/silent-shard-snap/pull/20)
+- Add license [`#19`](https://github.com/silence-laboratories/silent-shard-snap/pull/19)
+- Repairing flow added [`10c8c56`](https://github.com/silence-laboratories/silent-shard-snap/commit/10c8c56e012d6422ca4dcd3efee60076207b7410)
+
+## [1.2.6] - 2024-01-20
+
+### Fixed
+
+- Update the random for pairing id and added description [`#17`](https://github.com/silence-laboratories/silent-shard-snap/pull/17)
+- Update source of randomness for pairing id [`#18`](https://github.com/silence-laboratories/silent-shard-snap/pull/18)
+
+### Changed
+
+- Sync package files and bump Snap version to 1.2.3 [`#14`](https://github.com/silence-laboratories/silent-shard-snap/pull/14)
+- Update dependencies and remove github actions [`#12`](https://github.com/silence-laboratories/silent-shard-snap/pull/12)
+
+### Added
+
+- Add keyring permission, update logging [`#16`](https://github.com/silence-laboratories/silent-shard-snap/pull/16)
+
+
 ## [1.1.19] - 2023-10-30
 ### Changed
 - Updates for the latest Keyring API

@@ -10,13 +10,11 @@ import {
 	emitSnapKeyringEvent,
 } from '@metamask/keyring-api';
 import {
-	pubToAddress,
 	stripHexPrefix,
 	hashPersonalMessage,
 	bufArrToArr,
 } from '@ethereumjs/util';
 import type { Json } from '@metamask/utils';
-import { v4 as uuid } from 'uuid';
 import {
 	DistributedKey,
 	KeyringState,
@@ -32,7 +30,7 @@ import {
 import { runSign } from './sdk';
 import { Common, Hardfork } from '@ethereumjs/common';
 import { TransactionFactory } from '@ethereumjs/tx';
-import { isEvmChain, toHexString } from './utils';
+import { getAddressFromDistributedKey, isEvmChain, toHexString } from './utils';
 import { JsonRpcRequest } from '@metamask/snaps-types';
 import keccak256 from 'keccak256';
 import {
@@ -68,23 +66,20 @@ export class SimpleKeyring implements Keyring {
 		options: Record<string, Json> = {},
 	): Promise<KeyringAccount> {
 		let silentShareStorage: StorageData = await getSilentShareStorage();
-		if (!silentShareStorage.tempDistributedKey) {
+		const newPairingState = silentShareStorage.newPairingState;
+		if (!newPairingState?.distributedKey || !newPairingState.accountId) {
 			throw new SnapError(
 				'Do keygen before creating account',
 				SnapErrorCode.WalletNotCreated,
 			);
 		}
-		let distributedKey: DistributedKey =
-			silentShareStorage.tempDistributedKey;
+
+		let distributedKey: DistributedKey = newPairingState.distributedKey;
 		let account: KeyringAccount;
-		const address =
-			'0x' +
-			pubToAddress(Buffer.from(distributedKey.publicKey, 'hex')).toString(
-				'hex',
-			);
+		const address = getAddressFromDistributedKey(distributedKey);
 
 		account = {
-			id: silentShareStorage.accountId ?? uuid(),
+			id: newPairingState.accountId,
 			options,
 			address,
 			methods: [
@@ -163,9 +158,21 @@ export class SimpleKeyring implements Keyring {
 	}
 
 	async deleteAccount(id: string): Promise<void> {
+		let silentShareStorage: StorageData = await getSilentShareStorage();
 		await this.#emitEvent(KeyringEvent.AccountDeleted, { id });
 		delete this.#wallets[id];
-		await deleteStorage();
+		if (
+			silentShareStorage.newPairingState?.pairingData &&
+			silentShareStorage.newPairingState?.pairingData?.pairingId !==
+				silentShareStorage.pairingData.pairingId
+		)
+			await saveSilentShareStorage({
+				...silentShareStorage,
+				pairingData: silentShareStorage.newPairingState.pairingData,
+				wallets: this.#wallets,
+				requests: this.#requests,
+			});
+		else deleteStorage();
 	}
 
 	async listRequests(): Promise<KeyringRequest[]> {
