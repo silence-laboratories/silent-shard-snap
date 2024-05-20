@@ -29,9 +29,13 @@ Using Snap, allows us to prove how Multi-Party Computation-based signature schem
 
 ## How to test
 
-- Use [a Jest preset](https://github.com/MetaMask/snaps/tree/main/packages/snaps-jest) for end-to-end testing MetaMask Snaps.
+- Use [Snap Jest preset](https://github.com/MetaMask/snaps/tree/main/packages/snaps-jest) for e2e tests.
 - Run `yarn test` or `yarn test --coverage` to see test result and coverage.
 - While you see this warning `@firebase/firestore: Firestore (9.23.0): GrpcConnection RPC 'Listen' stream 0x1ce2204b error. Code: 1 Message: 1 CANCELLED: Disconnecting idle stream. Timed out waiting for new targets.` after running the test, its due to: https://github.com/jestjs/jest/issues/11464 
+
+## How to give force update for snap
+Update the minimum snap version required in firebase remote config ([Firebase remote config](https://console.firebase.google.com/project/mobile-wallet-mm-snap-staging/config/env/firebase)).
+You need permission to open this.
 
 ## Debugging
 

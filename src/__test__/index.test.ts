@@ -22,6 +22,7 @@ const INIT_PAIR_PANEL_DESCRIPTION = [
 	`Happy to have you onboard! 🥳`,
 ];
 const WALLER_ADDRESS = '0x660265edc169bab511a40c0e049cc1e33774443d';
+const TO_ADDRESS = '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb';
 
 export const DEVICE_NAME =
 	'e2e-test-device' + Math.floor(Math.random() * 1000000);
@@ -247,7 +248,7 @@ describe('test rpc requests to Snap', () => {
 			const mockEip1559Tx: any = {
 				type: '0x2',
 				nonce: '0x1',
-				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
+				to: TO_ADDRESS,
 				from: WALLER_ADDRESS,
 				value: '0x0',
 				data: '0x',
@@ -299,7 +300,7 @@ describe('test rpc requests to Snap', () => {
 			const mockLegacyTx: any = {
 				type: '0x0',
 				nonce: '0x0',
-				to: '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb',
+				to: TO_ADDRESS,
 				from: WALLER_ADDRESS,
 				value: '0x0',
 				data: '0x',
@@ -332,26 +333,6 @@ describe('test rpc requests to Snap', () => {
 				common: commonLegacy,
 			});
 			expect(legacyTx.verifySignature()).toEqual(true);
-
-			// Test typed data sign
-			// const mockTypedDataTx =
-			// Test personal sign
-			// const mockPersonalMsg =
-			// 	'0x4578616d706c652060706572736f6e616c5f7369676e60206d657373616765';
-			// let personalSignResult: any = await keyring
-			// 	.signPersonalMessage(
-			// 		WALLER_ADDRESS,
-			// 		mockPersonalMsg,
-			// 		runTssSign,
-			// 	)
-			// 	console.log(personalSignResult);
-
-			// const helloWorldSignature =
-			// 	'0xb148cdfdbc49208341271a1868e797ab7e04f02ac5f8f0c22fe6ddaee10da0c71dd0a131117950b9f152898d310b5cd54e3c1323dbddf97d93f719661f38cad41b';
-			// expect(personalSignResult).toEqual(helloWorldSignature);
-
-			// Test eth sign
-			// const mockEthSign =
 		});
 
 		it('tss_unpair should be success', async () => {
