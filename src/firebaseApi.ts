@@ -4,8 +4,8 @@
 import { SnapError, SnapErrorCode } from './error';
 
 const baseUrl = process.env.IS_PRODUCTION
-	? 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net'
-	: 'https://us-central1-mobile-wallet-mm-snap-staging.cloudfunctions.net';
+	? 'https://cloudfuntion-prod.silencelaboratories.com'
+	: 'https://cloudfuntion-stage.silencelaboratories.com';
 
 interface Response {
 	response: any;
@@ -78,7 +78,7 @@ export const refreshTokenEndpoint = async (
 
 export const sendMessage = async <T>(
 	token: string,
-	type: 'keygen' | 'sign' | 'pairing' | 'backup',
+	type: 'keygen' | 'sign' | 'pairing' | 'backup' | 'users',
 	conversation: T | null,
 	expectResponse: boolean,
 	docId?: string,
