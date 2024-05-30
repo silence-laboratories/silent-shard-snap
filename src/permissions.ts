@@ -13,6 +13,7 @@ export enum InternalMethod {
 	TssRunRePairing = 'tss_runRePairing',
 	TssSetSnapVersion = 'tss_setSnapVersion',
 	E2eTestGetKeyShare = 'e2e_test_getKeyShare',
+	TssRunBackup = 'tss_runBackup',
 }
 
 export enum SigningMethods {
@@ -57,6 +58,7 @@ export const PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssUnPair,
 			InternalMethod.TssRunRePairing,
 			InternalMethod.TssSetSnapVersion,
+			InternalMethod.TssRunBackup,
 		],
 	],
 ]);
@@ -79,6 +81,7 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssRunRePairing,
 			InternalMethod.TssSetSnapVersion,
 			InternalMethod.E2eTestGetKeyShare,
+			InternalMethod.TssRunBackup,
 		],
 	],
 	[
@@ -103,6 +106,7 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
 			InternalMethod.TssSetSnapVersion,
+			InternalMethod.TssRunBackup,
 		],
 	],
 	[
@@ -127,6 +131,7 @@ export const STAGING_PERMISSIONS = new Map<string, string[]>([
 			InternalMethod.TssSnapVersion,
 			InternalMethod.TssUnPair,
 			InternalMethod.TssSetSnapVersion,
+			InternalMethod.TssRunBackup,
 		],
 	],
 ]);

@@ -182,6 +182,19 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			};
 
 		/**
+		 * tss_runBackup
+		 * @abstract This methods update the backup and phone can listen to the backup
+		 *
+		 * @throws
+		 * 1. NotPaired, if snap is not paired yet.
+		 * 2. FirebaseError, when error occurs on server side, message will contains info,
+		 * 3. UnknownError, when something unknown error occurs
+		 * 4. BackupFailed, when distributed key not found
+		 */
+		case InternalMethod.TssRunBackup:
+			await sdk.runBackup();
+
+		/**
 		 * tss_snapVersion
 		 * @abstract get the latest snap version and the version installed
 		 *
