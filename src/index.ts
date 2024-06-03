@@ -172,7 +172,6 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 */
 		case InternalMethod.TssRunKeygen:
 			const keygenRes = await sdk.runKeygen();
-			await sdk.runBackup();
 			return {
 				address:
 					'0x' +
