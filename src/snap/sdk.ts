@@ -162,13 +162,13 @@ async function runBackup() {
 	let { pairingData, silentShareStorage } = await getPairingDataAndStorage();
 	if (silentShareStorage.newPairingState?.distributedKey) {
 		const encryptedMessage = await encMessage(
-			JSON.stringify(silentShareStorage.newPairingState?.distributedKey),
+			JSON.stringify(silentShareStorage.newPairingState.distributedKey),
 		);
 		await Backup.backup(
 			pairingData,
 			encryptedMessage,
 			getAddressFromDistributedKey(
-				silentShareStorage.newPairingState?.distributedKey,
+				silentShareStorage.newPairingState.distributedKey,
 			),
 		);
 	} else
