@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Set backup on snap update
+
+## [1.2.8]
 - Set snap version using update snap RPC method [`#31`](https://github.com/silence-laboratories/silent-shard-snap/pull/31)
 - E2e test [`#28`](https://github.com/silence-laboratories/silent-shard-snap/pull/28)
 - Mm 405 use load balancer endpoints of firebase function for snap [`#29`](https://github.com/silence-laboratories/silent-shard-snap/pull/29)

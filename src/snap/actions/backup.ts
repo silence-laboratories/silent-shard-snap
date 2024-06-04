@@ -8,6 +8,7 @@ import { BackupConversation, PairingData } from '../../types';
 export const backup = async (
 	pairingData: PairingData,
 	encryptedMessage: string,
+	address: string,
 ) => {
 	try {
 		const response = await sendMessage(
@@ -17,6 +18,8 @@ export const backup = async (
 				backupData: encryptedMessage,
 				pairingId: pairingData.pairingId,
 				createdAt: Date.now(),
+				address,
+				walletId: 'metamask',
 				expiry: 30000,
 			} as BackupConversation,
 			false,
