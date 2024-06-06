@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.9]
 - New runBackup rpc method to send backup, add address and walletId to backup [`35`](https://github.com/silence-laboratories/silent-shard-snap/pull/35) [`36`](https://github.com/silence-laboratories/silent-shard-snap/pull/36)
 - Remove load balancer [`37`]
 (https://github.com/silence-laboratories/silent-shard-snap/pull/37)
