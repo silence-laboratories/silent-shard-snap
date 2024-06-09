@@ -23,6 +23,7 @@ import {
 import {
 	BackupConversation,
 	KeygenConversation,
+	Message,
 	SignConversation,
 } from '../../types';
 import { DEVICE_NAME } from '../index.test';
@@ -100,7 +101,7 @@ class sdk2 {
 		}
 	};
 
-	public keygen = async (isApproved = true) => {
+	public keygen = async () => {
 		if (!this.uid) {
 			throw new Error(`Uid missing`);
 		}
@@ -115,7 +116,7 @@ class sdk2 {
 		let keygenUnsub: any;
 		await new Promise<void>((resolve) => {
 			keygenUnsub = onSnapshot(
-				doc(db, 'keygen', this.pairingId!),
+				doc(db, 'keygen', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
 						querySnapshot.data() as KeygenConversation;
@@ -128,13 +129,7 @@ class sdk2 {
 					}
 					if (conversation) {
 						const message = conversation.message;
-						if (!isApproved && this.uid) {
-							await setDoc(doc(db, 'keygen', this.pairingId!), {
-								...conversation,
-								isApproved: false,
-							} as KeygenConversation);
-							resolve();
-						} else if (
+						if (
 							message.party === 1 &&
 							message.message &&
 							message.nonce
@@ -145,16 +140,8 @@ class sdk2 {
 								p2 = new P2KeyGen(sessionId, x2);
 							}
 
-							const decMessage = uint8ArrayToUtf8String(
-								_sodium.crypto_box_open_easy(
-									b64ToUint8Array(message.message),
-									_sodium.from_hex(message.nonce),
-									this.webEncPublicKey,
-									this.phoneEncPrivateKey,
-								),
-							);
-
-							const decodedMessage = b64ToString(decMessage);
+							const decodedMessage =
+								this._decryptMessage(message);
 
 							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
@@ -174,7 +161,7 @@ class sdk2 {
 								);
 
 								await setDoc(
-									doc(db, 'keygen', this.pairingId!),
+									doc(db, 'keygen', this.uid!),
 									{
 										...conversation,
 										message: {
@@ -197,7 +184,7 @@ class sdk2 {
 			);
 		});
 		if (keygenUnsub) {
-			console.log("keygen unsub");
+			console.log('keygen unsub');
 			keygenUnsub();
 		}
 	};
@@ -220,7 +207,7 @@ class sdk2 {
 		let round = 1;
 		await new Promise<string | null>((resolve) => {
 			this.signUnSub = onSnapshot(
-				doc(db, 'sign', this.pairingId!),
+				doc(db, 'sign', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
 						querySnapshot.data() as SignConversation;
@@ -234,9 +221,9 @@ class sdk2 {
 					}
 					if (conversation) {
 						const message = conversation.message;
-						validateMessage(conversation);
+						this._validateMessage(conversation);
 						if (!isApproved) {
-							await setDoc(doc(db, 'sign', this.pairingId!), {
+							await setDoc(doc(db, 'sign', this.uid!), {
 								...conversation,
 								isApproved: false,
 							});
@@ -272,17 +259,9 @@ class sdk2 {
 									this.keyshare,
 								);
 							}
-							
 
-							const decMessage = uint8ArrayToUtf8String(
-								_sodium.crypto_box_open_easy(
-									b64ToUint8Array(message.message),
-									_sodium.from_hex(message.nonce),
-									this.webEncPublicKey,
-									this.phoneEncPrivateKey,
-								),
-							);
-							const decodedMessage = b64ToString(decMessage);
+							const decodedMessage =
+								this._decryptMessage(message);
 							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
 								const nonce = _sodium.randombytes_buf(
@@ -299,7 +278,7 @@ class sdk2 {
 										this.phoneEncPrivateKey,
 									),
 								);
-								await setDoc(doc(db, 'sign', this.pairingId!), {
+								await setDoc(doc(db, 'sign', this.uid!), {
 									...conversation,
 									message: {
 										nonce: _sodium.to_hex(nonce),
@@ -319,10 +298,10 @@ class sdk2 {
 					}
 				},
 				(error) => {
-					if(this.signUnSub) {
+					if (this.signUnSub) {
 						this.signUnSub();
 					}
-				}
+				},
 			);
 		});
 	};
@@ -330,35 +309,48 @@ class sdk2 {
 	public backup = () => {
 		let backupUnsub: any;
 		backupUnsub = onSnapshot(
-			doc(db, 'backup', this.pairingId!),
+			doc(db, 'backup', this.uid!),
 			async (querySnapshot) => {
 				const conversation = querySnapshot.data() as BackupConversation;
 				if (conversation?.backupData) {
 					this.backupData = conversation.backupData;
 					if (backupUnsub) {
-						console.log("backup unsub");
+						console.log('backup unsub');
 						backupUnsub();
 					}
 				}
 			},
 		);
 	};
-}
 
-const validateMessage = (conversation: SignConversation) => {
-	const expiry_at = conversation.createdAt + conversation.expiry;
-	const now = Date.now();
-	if (conversation.createdAt > now) {
-		console.error(
-			`Sign message on round ${conversation.message.round} of party ${conversation.message.party} has incorrect creation date`,
+	_validateMessage = (conversation: SignConversation) => {
+		const expiry_at = conversation.createdAt + conversation.expiry;
+		const now = Date.now();
+		if (conversation.createdAt > now) {
+			console.error(
+				`Sign message on round ${conversation.message.round} of party ${conversation.message.party} has incorrect creation date`,
+			);
+		}
+		if (expiry_at < now) {
+			console.error(
+				`Sign message on round ${conversation.message.round} of party ${conversation.message.party} expired`,
+			);
+		}
+	};
+
+	_decryptMessage = (message: Message) => {
+		const decMessage = uint8ArrayToUtf8String(
+			_sodium.crypto_box_open_easy(
+				b64ToUint8Array(message.message!),
+				_sodium.from_hex(message.nonce!),
+				this.webEncPublicKey!,
+				this.phoneEncPrivateKey!,
+			),
 		);
-	}
-	if (expiry_at < now) {
-		console.error(
-			`Sign message on round ${conversation.message.round} of party ${conversation.message.party} expired`,
-		);
-	}
-};
+		const decodedMessage = b64ToString(decMessage);
+		return decodedMessage;
+	};
+}
 
 const sdkSingleton = new sdk2();
 
