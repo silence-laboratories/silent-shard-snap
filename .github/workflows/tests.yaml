@@ -1,0 +1,28 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+    - CI/CD
+
+  pull_request:
+    branches:
+    - CI/CD
+
+
+jobs:
+  lints:
+    name: Lints
+    runs-on: silent-shard-snap-builder
+    strategy:
+      matrix:
+        node-version: ['18.x']
+
+    steps:
+    - uses: actions/checkout@v4
+    - run: |
+        yarn config get enableImmutableInstalls
+        yarn cache clean --all
+        yarn install --immutable
+    - run: yarn build
+    - run: npm test
