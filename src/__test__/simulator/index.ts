@@ -16,6 +16,7 @@ export const cleanUpSimulation = async () => {
 	try {
 		await removeUser();
 		sdk.cleanState();
+		console.log("cleanUpSimulation sim done");
 	} catch (error) {
 		console.error("cleanUpSimulation sim err", error);
 	}

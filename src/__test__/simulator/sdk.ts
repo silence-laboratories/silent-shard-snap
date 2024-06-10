@@ -45,10 +45,6 @@ class sdk2 {
 		delete this.backupData;
 		delete this.uid;
 		delete this.pairingId;
-		if (this.signUnSub) {
-			this.signUnSub();
-			delete this.signUnSub;
-		}
 	};
 
 	private signUnSub?: () => any;
@@ -160,19 +156,16 @@ class sdk2 {
 									),
 								);
 
-								await setDoc(
-									doc(db, 'keygen', this.uid!),
-									{
-										...conversation,
-										message: {
-											nonce: _sodium.to_hex(nonce),
-											message: encMessage,
-											party: 2,
-											round,
-										},
-										isApproved: true,
+								await setDoc(doc(db, 'keygen', this.uid!), {
+									...conversation,
+									message: {
+										nonce: _sodium.to_hex(nonce),
+										message: encMessage,
+										party: 2,
+										round,
 									},
-								);
+									isApproved: true,
+								});
 								round++;
 							} else if (msg.p2_key_share) {
 								this.keyshare = msg.p2_key_share;
@@ -189,7 +182,7 @@ class sdk2 {
 		}
 	};
 
-	public sign = async (isApproved = true) => {
+	public sign = async () => {
 		await _sodium.ready;
 		if (!this.uid) {
 			throw new Error(`Uid missing`);
@@ -205,8 +198,9 @@ class sdk2 {
 		}
 		let p2: P2Signature | null = null;
 		let round = 1;
+		let signUnSub: any;
 		await new Promise<string | null>((resolve) => {
-			this.signUnSub = onSnapshot(
+			signUnSub = onSnapshot(
 				doc(db, 'sign', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
@@ -222,33 +216,33 @@ class sdk2 {
 					if (conversation) {
 						const message = conversation.message;
 						this._validateMessage(conversation);
-						if (!isApproved) {
-							await setDoc(doc(db, 'sign', this.uid!), {
-								...conversation,
-								isApproved: false,
-							});
-						} else if (
+						if (
 							message.party === 1 &&
 							message.message &&
 							message.nonce
 						) {
-							if (p2 === null || p2._state === 0) {
+							if (p2 === null) {
+								console.log('p2 is null only once');
 								let messageHash;
-								if (conversation.hashAlg === 'keccak256')
-									messageHash = keccak256(
-										'0x' + conversation.signMessage,
-									).toString('hex');
-								else if (
-									conversation.hashAlg === 'signTypedDataV1'
-								)
-									messageHash = typedSignatureHash(
-										JSON.parse(conversation.signMessage),
-									);
-								else
-									messageHash = TypedDataUtils.eip712Hash(
-										JSON.parse(conversation.signMessage),
-										SignTypedDataVersion.V4,
-									).toString('hex');
+								console.log(conversation.signMetadata);
+								switch (conversation.signMetadata) {
+									case 'eth_transaction':
+									case 'legacy_transaction':
+										messageHash = keccak256(
+											'0x' + conversation.signMessage,
+										).toString('hex');
+										break;
+									case 'personal_sign':
+										let messageToSignBytes = Buffer.from(conversation.signMessage, 'hex');
+										let prefix = `\u0019Ethereum Signed Message:\n${messageToSignBytes.length}`;
+										let prefixBytes = Buffer.from(prefix, 'utf8');
+										let msg = Buffer.concat([prefixBytes, messageToSignBytes]);
+										messageHash = keccak256(msg).toString('hex');
+										break;
+									default:
+										messageHash = conversation.messageHash;
+								}
+
 								if (messageHash.startsWith('0x')) {
 									messageHash = messageHash.slice(2);
 								}
@@ -291,15 +285,23 @@ class sdk2 {
 								round++;
 							} else if (msg.signature) {
 								resolve(msg.signature);
+								if (signUnSub) {
+									console.log('sign unsub');
+									signUnSub();
+								}
 							} else {
 								resolve(null);
+								if (signUnSub) {
+									console.log('sign unsub');
+									signUnSub();
+								}
 							}
 						}
 					}
 				},
 				(error) => {
-					if (this.signUnSub) {
-						this.signUnSub();
+					if (signUnSub) {
+						signUnSub();
 					}
 				},
 			);
