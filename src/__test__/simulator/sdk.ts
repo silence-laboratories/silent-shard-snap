@@ -222,9 +222,7 @@ class sdk2 {
 							message.nonce
 						) {
 							if (p2 === null) {
-								console.log('p2 is null only once');
 								let messageHash;
-								console.log(conversation.signMetadata);
 								switch (conversation.signMetadata) {
 									case 'eth_transaction':
 									case 'legacy_transaction':

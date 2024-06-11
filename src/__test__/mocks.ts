@@ -47,7 +47,7 @@ export const genMockRunTssSign =
 		// if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
 		// 	pairingData = await refreshPairing();
 		// }
-		let messageHash = fromHexStringToBytes(messageHashHex);
+		const messageHash = fromHexStringToBytes(messageHashHex);
 		if (messageHash.length !== 32) {
 			throw new SnapError(
 				'Invalid length of messageHash, should be 32 bytes',
@@ -97,6 +97,7 @@ export const mockPersonalMsg = `0x${Buffer.from(
 	exampleMessage,
 	'utf8',
 ).toString('hex')}`;
+
 export const mockSignTypedDataV4 = {
 	domain: {
 		chainId: '11155111',
