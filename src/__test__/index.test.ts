@@ -1,7 +1,6 @@
 import { expect } from '@jest/globals';
 import { SnapConfirmationInterface, installSnap } from '@metamask/snaps-jest';
-import { DialogType, panel, text } from '@metamask/snaps-sdk';
-import { divider, heading } from '@metamask/snaps-ui';
+import { DialogType, panel, text, divider, heading } from '@metamask/snaps-sdk';
 import { SnapError, SnapErrorCode } from '../error';
 import { DAPP_URL_STAGING, InternalMethod } from '../permissions';
 import * as simulator from './simulator';
