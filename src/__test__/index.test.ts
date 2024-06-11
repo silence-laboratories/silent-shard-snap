@@ -10,7 +10,11 @@ import { delay } from '../snap/utils';
 
 import { TransactionFactory } from '@ethereumjs/tx';
 import { Common, Hardfork } from '@ethereumjs/common';
-import { SignTypedDataVersion } from '@metamask/eth-sig-util';
+import {
+	SignTypedDataVersion,
+	recoverPersonalSignature, // TODO: Use these methods to verify the signature
+	recoverTypedSignature,
+} from '@metamask/eth-sig-util';
 import {
 	WALLER_ADDRESS,
 	mockLegacyTx,
@@ -22,6 +26,7 @@ import {
 	mockSignTypedDataV3,
 	mockSignTypedDataV1,
 } from './mocks';
+import { toChecksumAddress } from '@ethereumjs/util';
 
 const ORIGIN = DAPP_URL_STAGING;
 const INIT_PAIR_PANEL_HEADING = `Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`;
@@ -200,8 +205,8 @@ describe('test rpc requests to Snap', () => {
 
 			const pairingData = keyshareResult.pairingData;
 			const runTssSign = genMockRunTssSign(pairingData);
-			// Eip1559 sign
 
+			// Eip1559 sign
 			let eip1559SignResult: any = null;
 			keyring
 				.signTransaction(mockEip1559Tx, runTssSign)
@@ -211,7 +216,7 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			simulator.sign();
+			const unsub = await simulator.sign();
 
 			while (!eip1559SignResult) {
 				await delay(0);
@@ -238,100 +243,8 @@ describe('test rpc requests to Snap', () => {
 				common,
 			});
 			expect(eip1559tx.verifySignature()).toEqual(true);
-			await simulator.cleanUpSimulation();
-		});
-
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, legacy tx signing should be success', async () => {
-			const { request } = await installSnap();
-			// Test init pairing
-			const initPairingReq = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui = await initPairingReq.getInterface();
-			expect(ui.type).toBe(DialogType.Confirmation);
-			const prompt = INIT_PAIR_PANEL_HEADING;
-			const description = INIT_PAIR_PANEL_DESCRIPTION;
-			expect(ui).toRender(
-				panel([
-					heading(prompt),
-					divider(),
-					...description.map((t) => text(t)),
-				]),
-			);
-
-			await ui.ok();
-
-			const initPairingJson: any = (await initPairingReq).response;
-			const initPairingResult =
-				initPairingJson.result as InitPairingResponse;
-			const qrCode = initPairingResult.qrCode;
-			const qrCodeObj = JSON.parse(qrCode) as QrCode;
-
-			expect(qrCodeObj.pairingId).toEqual(expect.any(String));
-			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-			// Test run pairing
-			await simulator.signIn();
-			await simulator.pairing(qrCode);
-
-			const runPairingReq = request({
-				method: InternalMethod.TssRunPairing,
-				origin: ORIGIN,
-			});
-
-			const runPairingJson: any = (await runPairingReq).response;
-			const runPairingResult =
-				runPairingJson.result as RunPairingResponse;
-			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
-			expect(runPairingResult.address).toBeNull();
-
-			// Test key generation
-			const keygenReq = request({
-				method: InternalMethod.TssRunKeygen,
-				origin: ORIGIN,
-			});
-			await simulator.keygen();
-
-			const keyGenJson: any = (await keygenReq).response;
-			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
-			expect(runKeyGenResult.address).toEqual(expect.any(String));
-
-			request({
-				method: InternalMethod.TssRunBackup,
-				origin: ORIGIN,
-			});
-
-			// Test signing
-			const keyshareReq = request({
-				method: InternalMethod.E2eTestGetKeyShare,
-				origin: ORIGIN,
-			});
-			const keyshareReqJson: any = (await keyshareReq).response;
-			const keyshareResult = keyshareReqJson.result as {
-				distributedKey: DistributedKey;
-				pairingData: PairingData;
-			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						...MOCK_WALLET_ACCOUNT,
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
-			const pairingData = keyshareResult.pairingData;
-			const runTssSign = genMockRunTssSign(pairingData);
 
 			// Legacy sign
-
 			let legacySignResult: any = null;
 			keyring
 				.signTransaction(mockLegacyTx, runTssSign)
@@ -341,7 +254,6 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			simulator.sign();
 
 			while (!legacySignResult) {
 				await delay(0);
@@ -368,97 +280,6 @@ describe('test rpc requests to Snap', () => {
 				common: commonLegacy,
 			});
 			expect(legacyTx.verifySignature()).toEqual(true);
-			await simulator.cleanUpSimulation();
-		});
-
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, personal signing should be success', async () => {
-			const { request } = await installSnap();
-			// Test init pairing
-			const initPairingReq = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui = await initPairingReq.getInterface();
-			expect(ui.type).toBe(DialogType.Confirmation);
-			const prompt = INIT_PAIR_PANEL_HEADING;
-			const description = INIT_PAIR_PANEL_DESCRIPTION;
-			expect(ui).toRender(
-				panel([
-					heading(prompt),
-					divider(),
-					...description.map((t) => text(t)),
-				]),
-			);
-
-			await ui.ok();
-
-			const initPairingJson: any = (await initPairingReq).response;
-			const initPairingResult =
-				initPairingJson.result as InitPairingResponse;
-			const qrCode = initPairingResult.qrCode;
-			const qrCodeObj = JSON.parse(qrCode) as QrCode;
-
-			expect(qrCodeObj.pairingId).toEqual(expect.any(String));
-			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-			// Test run pairing
-			await simulator.signIn();
-			await simulator.pairing(qrCode);
-
-			const runPairingReq = request({
-				method: InternalMethod.TssRunPairing,
-				origin: ORIGIN,
-			});
-
-			const runPairingJson: any = (await runPairingReq).response;
-			const runPairingResult =
-				runPairingJson.result as RunPairingResponse;
-			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
-			expect(runPairingResult.address).toBeNull();
-
-			// Test key generation
-			const keygenReq = request({
-				method: InternalMethod.TssRunKeygen,
-				origin: ORIGIN,
-			});
-			await simulator.keygen();
-
-			const keyGenJson: any = (await keygenReq).response;
-			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
-			expect(runKeyGenResult.address).toEqual(expect.any(String));
-
-			request({
-				method: InternalMethod.TssRunBackup,
-				origin: ORIGIN,
-			});
-
-			// Test signing
-			const keyshareReq = request({
-				method: InternalMethod.E2eTestGetKeyShare,
-				origin: ORIGIN,
-			});
-			const keyshareReqJson: any = (await keyshareReq).response;
-			const keyshareResult = keyshareReqJson.result as {
-				distributedKey: DistributedKey;
-				pairingData: PairingData;
-			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						...MOCK_WALLET_ACCOUNT,
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
-			const pairingData = keyshareResult.pairingData;
-			const runTssSign = genMockRunTssSign(pairingData);
 
 			// Personal sign
 			let personalSignResult: any = null;
@@ -475,105 +296,14 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			simulator.sign();
 			while (!personalSignResult) {
 				await delay(0);
 				console.log('waiting for personalSignResult');
 			}
+			expect(personalSignResult).toEqual(expect.any(String));
+			expect(personalSignResult).toMatch(/^0x/);
 
-			await simulator.cleanUpSimulation();
-		});
-
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, V4 typed signing should be success', async () => {
-			const { request } = await installSnap();
-			// Test init pairing
-			const initPairingReq = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui = await initPairingReq.getInterface();
-			expect(ui.type).toBe(DialogType.Confirmation);
-			const prompt = INIT_PAIR_PANEL_HEADING;
-			const description = INIT_PAIR_PANEL_DESCRIPTION;
-			expect(ui).toRender(
-				panel([
-					heading(prompt),
-					divider(),
-					...description.map((t) => text(t)),
-				]),
-			);
-
-			await ui.ok();
-
-			const initPairingJson: any = (await initPairingReq).response;
-			const initPairingResult =
-				initPairingJson.result as InitPairingResponse;
-			const qrCode = initPairingResult.qrCode;
-			const qrCodeObj = JSON.parse(qrCode) as QrCode;
-
-			expect(qrCodeObj.pairingId).toEqual(expect.any(String));
-			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-			// Test run pairing
-			await simulator.signIn();
-			await simulator.pairing(qrCode);
-
-			const runPairingReq = request({
-				method: InternalMethod.TssRunPairing,
-				origin: ORIGIN,
-			});
-
-			const runPairingJson: any = (await runPairingReq).response;
-			const runPairingResult =
-				runPairingJson.result as RunPairingResponse;
-			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
-			expect(runPairingResult.address).toBeNull();
-
-			// Test key generation
-			const keygenReq = request({
-				method: InternalMethod.TssRunKeygen,
-				origin: ORIGIN,
-			});
-			await simulator.keygen();
-
-			const keyGenJson: any = (await keygenReq).response;
-			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
-			expect(runKeyGenResult.address).toEqual(expect.any(String));
-
-			request({
-				method: InternalMethod.TssRunBackup,
-				origin: ORIGIN,
-			});
-
-			// Test signing
-			const keyshareReq = request({
-				method: InternalMethod.E2eTestGetKeyShare,
-				origin: ORIGIN,
-			});
-			const keyshareReqJson: any = (await keyshareReq).response;
-			const keyshareResult = keyshareReqJson.result as {
-				distributedKey: DistributedKey;
-				pairingData: PairingData;
-			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						...MOCK_WALLET_ACCOUNT,
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
-			const pairingData = keyshareResult.pairingData;
-			const runTssSign = genMockRunTssSign(pairingData);
-
-			// Typed sign
+			// Typed v4 sign
 			let typedV4SignResult: any = null;
 
 			keyring
@@ -590,107 +320,14 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			simulator.sign();
 			while (!typedV4SignResult) {
 				await delay(0);
 				console.log('waiting for typedV4SignResult');
 			}
+			expect(typedV4SignResult).toEqual(expect.any(String));
+			expect(typedV4SignResult).toMatch(/^0x/);
 
-			
-
-			await simulator.cleanUpSimulation();
-		});
-
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, V3 typed signing should be success', async () => {
-			const { request } = await installSnap();
-			// Test init pairing
-			const initPairingReq = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui = await initPairingReq.getInterface();
-			expect(ui.type).toBe(DialogType.Confirmation);
-			const prompt = INIT_PAIR_PANEL_HEADING;
-			const description = INIT_PAIR_PANEL_DESCRIPTION;
-			expect(ui).toRender(
-				panel([
-					heading(prompt),
-					divider(),
-					...description.map((t) => text(t)),
-				]),
-			);
-
-			await ui.ok();
-
-			const initPairingJson: any = (await initPairingReq).response;
-			const initPairingResult =
-				initPairingJson.result as InitPairingResponse;
-			const qrCode = initPairingResult.qrCode;
-			const qrCodeObj = JSON.parse(qrCode) as QrCode;
-
-			expect(qrCodeObj.pairingId).toEqual(expect.any(String));
-			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-			// Test run pairing
-			await simulator.signIn();
-			await simulator.pairing(qrCode);
-
-			const runPairingReq = request({
-				method: InternalMethod.TssRunPairing,
-				origin: ORIGIN,
-			});
-
-			const runPairingJson: any = (await runPairingReq).response;
-			const runPairingResult =
-				runPairingJson.result as RunPairingResponse;
-			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
-			expect(runPairingResult.address).toBeNull();
-
-			// Test key generation
-			const keygenReq = request({
-				method: InternalMethod.TssRunKeygen,
-				origin: ORIGIN,
-			});
-			await simulator.keygen();
-
-			const keyGenJson: any = (await keygenReq).response;
-			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
-			expect(runKeyGenResult.address).toEqual(expect.any(String));
-
-			request({
-				method: InternalMethod.TssRunBackup,
-				origin: ORIGIN,
-			});
-
-			// Test signing
-			const keyshareReq = request({
-				method: InternalMethod.E2eTestGetKeyShare,
-				origin: ORIGIN,
-			});
-			const keyshareReqJson: any = (await keyshareReq).response;
-			const keyshareResult = keyshareReqJson.result as {
-				distributedKey: DistributedKey;
-				pairingData: PairingData;
-			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						...MOCK_WALLET_ACCOUNT,
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
-			const pairingData = keyshareResult.pairingData;
-			const runTssSign = genMockRunTssSign(pairingData);
-
-			// Typed sign
+			// Typed v3 sign
 			let typedV3SignResult: any = null;
 
 			keyring
@@ -707,103 +344,12 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			simulator.sign();
 			while (!typedV3SignResult) {
 				await delay(0);
 				console.log('waiting for typedV3SignResult');
 			}
-
-			await simulator.cleanUpSimulation();
-		});
-
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, V1 typed signing should be success', async () => {
-			const { request } = await installSnap();
-			// Test init pairing
-			const initPairingReq = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui = await initPairingReq.getInterface();
-			expect(ui.type).toBe(DialogType.Confirmation);
-			const prompt = INIT_PAIR_PANEL_HEADING;
-			const description = INIT_PAIR_PANEL_DESCRIPTION;
-			expect(ui).toRender(
-				panel([
-					heading(prompt),
-					divider(),
-					...description.map((t) => text(t)),
-				]),
-			);
-
-			await ui.ok();
-
-			const initPairingJson: any = (await initPairingReq).response;
-			const initPairingResult =
-				initPairingJson.result as InitPairingResponse;
-			const qrCode = initPairingResult.qrCode;
-			const qrCodeObj = JSON.parse(qrCode) as QrCode;
-
-			expect(qrCodeObj.pairingId).toEqual(expect.any(String));
-			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-			// Test run pairing
-			await simulator.signIn();
-			await simulator.pairing(qrCode);
-
-			const runPairingReq = request({
-				method: InternalMethod.TssRunPairing,
-				origin: ORIGIN,
-			});
-
-			const runPairingJson: any = (await runPairingReq).response;
-			const runPairingResult =
-				runPairingJson.result as RunPairingResponse;
-			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
-			expect(runPairingResult.address).toBeNull();
-
-			// Test key generation
-			const keygenReq = request({
-				method: InternalMethod.TssRunKeygen,
-				origin: ORIGIN,
-			});
-			await simulator.keygen();
-
-			const keyGenJson: any = (await keygenReq).response;
-			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
-			expect(runKeyGenResult.address).toEqual(expect.any(String));
-
-			request({
-				method: InternalMethod.TssRunBackup,
-				origin: ORIGIN,
-			});
-
-			// Test signing
-			const keyshareReq = request({
-				method: InternalMethod.E2eTestGetKeyShare,
-				origin: ORIGIN,
-			});
-			const keyshareReqJson: any = (await keyshareReq).response;
-			const keyshareResult = keyshareReqJson.result as {
-				distributedKey: DistributedKey;
-				pairingData: PairingData;
-			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						...MOCK_WALLET_ACCOUNT,
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
-			const pairingData = keyshareResult.pairingData;
-			const runTssSign = genMockRunTssSign(pairingData);
+			expect(typedV3SignResult).toEqual(expect.any(String));
+			expect(typedV3SignResult).toMatch(/^0x/);
 
 			// Typed sign
 			let typedV1SignResult: any = null;
@@ -822,12 +368,14 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			simulator.sign();
 			while (!typedV1SignResult) {
 				await delay(0);
 				console.log('waiting for typedV1SignResult');
 			}
+			expect(typedV1SignResult).toEqual(expect.any(String));
+			expect(typedV1SignResult).toMatch(/^0x/);
 
+			unsub!();
 			await simulator.cleanUpSimulation();
 		});
 	});

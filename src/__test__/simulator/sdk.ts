@@ -27,6 +27,7 @@ import {
 	SignConversation,
 } from '../../types';
 import { DEVICE_NAME } from '../index.test';
+import { Unsubscribe } from 'firebase/auth';
 
 class sdk2 {
 	private phoneEncPrivateKey?: Uint8Array;
@@ -109,9 +110,8 @@ class sdk2 {
 		}
 		let p2: P2KeyGen | null = null;
 		let round = 1;
-		let keygenUnsub: any;
 		await new Promise<void>((resolve) => {
-			keygenUnsub = onSnapshot(
+			let keygenUnsub = onSnapshot(
 				doc(db, 'keygen', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
@@ -170,16 +170,23 @@ class sdk2 {
 							} else if (msg.p2_key_share) {
 								this.keyshare = msg.p2_key_share;
 								resolve();
+								if (keygenUnsub) {
+									console.log('keygen unsub');
+									keygenUnsub();
+								}
 							}
 						}
 					}
 				},
+				(error) => {
+					console.log("Error getting keygen conversation", error);
+					if (keygenUnsub) {
+						keygenUnsub();
+					}
+				},
 			);
 		});
-		if (keygenUnsub) {
-			console.log('keygen unsub');
-			keygenUnsub();
-		}
+		
 	};
 
 	public sign = async () => {
@@ -198,9 +205,8 @@ class sdk2 {
 		}
 		let p2: P2Signature | null = null;
 		let round = 1;
-		let signUnSub: any;
-		await new Promise<string | null>((resolve) => {
-			signUnSub = onSnapshot(
+		return await new Promise<Unsubscribe>((resolve) => {
+			let signUnSub = onSnapshot(
 				doc(db, 'sign', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
@@ -221,7 +227,7 @@ class sdk2 {
 							message.message &&
 							message.nonce
 						) {
-							if (p2 === null) {
+							if (p2 === null || p2._state === 0) {
 								let messageHash;
 								switch (conversation.signMetadata) {
 									case 'eth_transaction':
@@ -281,28 +287,18 @@ class sdk2 {
 									isApproved: true,
 								});
 								round++;
-							} else if (msg.signature) {
-								resolve(msg.signature);
-								if (signUnSub) {
-									console.log('sign unsub');
-									signUnSub();
-								}
-							} else {
-								resolve(null);
-								if (signUnSub) {
-									console.log('sign unsub');
-									signUnSub();
-								}
 							}
 						}
 					}
 				},
 				(error) => {
+					console.log("Error getting sign conversation", error);
 					if (signUnSub) {
 						signUnSub();
 					}
 				},
 			);
+			resolve(signUnSub)
 		});
 	};
 

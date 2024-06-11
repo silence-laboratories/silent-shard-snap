@@ -40,7 +40,7 @@ export const keygen = async () => {
 
 export const sign = async () => {
 	try {
-		await sdk.sign();
+		return await sdk.sign();
 	} catch (error) {
 		console.error("sign sim err",error);
 	}
