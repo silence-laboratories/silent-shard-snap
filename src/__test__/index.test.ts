@@ -380,7 +380,7 @@ describe('test rpc requests to Snap', () => {
 		});
 	});
 
-	// TODO: We only able to test this if Snap e2e package supports Keyring API
+	// TODO: We only able to test this if @metamask/snaps-jest package supports Keyring API
 	// it('tss_runRePairing should be success', async () => {
 	// const initRePairingReq = request({
 	// 	method: InternalMethod.TssInitPairing,
