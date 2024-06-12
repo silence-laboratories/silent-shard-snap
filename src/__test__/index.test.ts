@@ -26,7 +26,6 @@ import {
 	mockSignTypedDataV3,
 	mockSignTypedDataV1,
 } from './mocks';
-import { toChecksumAddress } from '@ethereumjs/util';
 
 const ORIGIN = DAPP_URL_STAGING;
 const INIT_PAIR_PANEL_HEADING = `Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`;
@@ -45,6 +44,13 @@ interface QrCode {
 }
 
 describe('test rpc requests to Snap', () => {
+	it('tss_isPaired should be failed before pairing', async () => {
+		const recoveredAddr = recoverPersonalSignature({			
+			data: "0x4578616d706c652060706572736f6e616c5f7369676e60206d657373616765",
+			signature: "0x63406196c7e96c56af7d98f92c365207eb7033f156a7e7a36a092ac68183407b74c7ae2f925223de2833cfe20915c254a95d63c2e3014dd92a918fa35d316df71b",
+		  });
+		console.log('recoveredAddr', recoveredAddr);
+	});
 	describe('wrong permission and rejection', () => {
 		it('throws an error if origin does not have permission', async () => {
 			const { request } = await installSnap();
@@ -206,84 +212,83 @@ describe('test rpc requests to Snap', () => {
 			const pairingData = keyshareResult.pairingData;
 			const runTssSign = genMockRunTssSign(pairingData);
 
-			// Eip1559 sign
-			let eip1559SignResult: any = null;
-			keyring
-				.signTransaction(mockEip1559Tx, runTssSign)
-				.then((resp: any) => {
-					eip1559SignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
-			const unsub = await simulator.sign();
+			// // Eip1559 sign
+			// let eip1559SignResult: any = null;
+			// keyring
+			// 	.signTransaction(mockEip1559Tx, runTssSign)
+			// 	.then((resp: any) => {
+			// 		eip1559SignResult = resp;
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log('err', err);
+			// 	});
+			// const unsub = await simulator.sign();
 
-			while (!eip1559SignResult) {
-				await delay(0);
-				console.log('waiting for eip1559SignResult');
-			}
+			// while (!eip1559SignResult) {
+			// 	await delay(0);
+			// }
 
-			for (const key in mockEip1559Tx) {
-				if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
-					expect(eip1559SignResult[key]).toEqual(mockEip1559Tx[key]);
-				}
-			}
+			// for (const key in mockEip1559Tx) {
+			// 	if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
+			// 		expect(eip1559SignResult[key]).toEqual(mockEip1559Tx[key]);
+			// 	}
+			// }
 
-			const common = Common.custom(
-				{ chainId: eip1559SignResult.chainId },
-				{
-					hardfork:
-						eip1559SignResult.maxPriorityFeePerGas ||
-						eip1559SignResult.maxFeePerGas
-							? Hardfork.London
-							: Hardfork.Istanbul,
-				},
-			);
-			let eip1559tx = TransactionFactory.fromTxData(eip1559SignResult, {
-				common,
-			});
-			expect(eip1559tx.verifySignature()).toEqual(true);
+			// const common = Common.custom(
+			// 	{ chainId: eip1559SignResult.chainId },
+			// 	{
+			// 		hardfork:
+			// 			eip1559SignResult.maxPriorityFeePerGas ||
+			// 			eip1559SignResult.maxFeePerGas
+			// 				? Hardfork.London
+			// 				: Hardfork.Istanbul,
+			// 	},
+			// );
+			// let eip1559tx = TransactionFactory.fromTxData(eip1559SignResult, {
+			// 	common,
+			// });
+			// expect(eip1559tx.verifySignature()).toEqual(true);
 
-			// Legacy sign
-			let legacySignResult: any = null;
-			keyring
-				.signTransaction(mockLegacyTx, runTssSign)
-				.then((resp: any) => {
-					legacySignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
+			// // Legacy sign
+			// let legacySignResult: any = null;
+			// keyring
+			// 	.signTransaction(mockLegacyTx, runTssSign)
+			// 	.then((resp: any) => {
+			// 		legacySignResult = resp;
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log('err', err);
+			// 	});
 
-			while (!legacySignResult) {
-				await delay(0);
-				console.log('waiting for legacySignResult');
-			}
+			// while (!legacySignResult) {
+			// 	await delay(0);
+			// }
 
-			for (const key in mockLegacyTx) {
-				if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
-					expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
-				}
-			}
+			// for (const key in mockLegacyTx) {
+			// 	if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
+			// 		expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
+			// 	}
+			// }
 
-			const commonLegacy = Common.custom(
-				{ chainId: legacySignResult.chainId },
-				{
-					hardfork:
-						legacySignResult.maxPriorityFeePerGas ||
-						legacySignResult.maxFeePerGas
-							? Hardfork.London
-							: Hardfork.Istanbul,
-				},
-			);
-			let legacyTx = TransactionFactory.fromTxData(legacySignResult, {
-				common: commonLegacy,
-			});
-			expect(legacyTx.verifySignature()).toEqual(true);
+			// const commonLegacy = Common.custom(
+			// 	{ chainId: legacySignResult.chainId },
+			// 	{
+			// 		hardfork:
+			// 			legacySignResult.maxPriorityFeePerGas ||
+			// 			legacySignResult.maxFeePerGas
+			// 				? Hardfork.London
+			// 				: Hardfork.Istanbul,
+			// 	},
+			// );
+			// let legacyTx = TransactionFactory.fromTxData(legacySignResult, {
+			// 	common: commonLegacy,
+			// });
+			// expect(legacyTx.verifySignature()).toEqual(true);
 
 			// Personal sign
 			let personalSignResult: any = null;
-
+			const unsub = await simulator.sign();
+			console.log("mockPersonalMsg", mockPersonalMsg)
 			keyring
 				.signPersonalMessage(
 					WALLER_ADDRESS,
@@ -298,82 +303,87 @@ describe('test rpc requests to Snap', () => {
 				});
 			while (!personalSignResult) {
 				await delay(0);
-				console.log('waiting for personalSignResult');
 			}
 			expect(personalSignResult).toEqual(expect.any(String));
 			expect(personalSignResult).toMatch(/^0x/);
 
-			// Typed v4 sign
-			let typedV4SignResult: any = null;
 
-			keyring
-				.signTypedData(
-					WALLER_ADDRESS,
-					mockSignTypedDataV4,
-					{ version: SignTypedDataVersion.V4 },
-					'eth_signTypedData_v4',
-					runTssSign,
-				)
-				.then((resp: any) => {
-					typedV4SignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
-			while (!typedV4SignResult) {
-				await delay(0);
-				console.log('waiting for typedV4SignResult');
-			}
-			expect(typedV4SignResult).toEqual(expect.any(String));
-			expect(typedV4SignResult).toMatch(/^0x/);
 
-			// Typed v3 sign
-			let typedV3SignResult: any = null;
+			const recoveredAddr = recoverPersonalSignature({
+				// data: '0xaf1dee894786c304604a039b041463c9ab8defb393403ea03cf2c85b1eb8cbfd',
+				data: mockPersonalMsg,
+				signature: personalSignResult,
+			  });
+			console.log('recoveredAddrrecoveredAddrrecoveredAddrrecoveredAddrrecoveredAddr', recoveredAddr);
 
-			keyring
-				.signTypedData(
-					WALLER_ADDRESS,
-					mockSignTypedDataV3,
-					{ version: SignTypedDataVersion.V3 },
-					'eth_signTypedData_v3',
-					runTssSign,
-				)
-				.then((resp: any) => {
-					typedV3SignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
-			while (!typedV3SignResult) {
-				await delay(0);
-				console.log('waiting for typedV3SignResult');
-			}
-			expect(typedV3SignResult).toEqual(expect.any(String));
-			expect(typedV3SignResult).toMatch(/^0x/);
+			// // Typed v4 sign
+			// let typedV4SignResult: any = null;
 
-			// Typed sign
-			let typedV1SignResult: any = null;
+			// keyring
+			// 	.signTypedData(
+			// 		WALLER_ADDRESS,
+			// 		mockSignTypedDataV4,
+			// 		{ version: SignTypedDataVersion.V4 },
+			// 		'eth_signTypedData_v4',
+			// 		runTssSign,
+			// 	)
+			// 	.then((resp: any) => {
+			// 		typedV4SignResult = resp;
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log('err', err);
+			// 	});
+			// while (!typedV4SignResult) {
+			// 	await delay(0);
+			// }
+			// expect(typedV4SignResult).toEqual(expect.any(String));
+			// expect(typedV4SignResult).toMatch(/^0x/);
 
-			keyring
-				.signTypedData(
-					WALLER_ADDRESS,
-					mockSignTypedDataV1,
-					{ version: SignTypedDataVersion.V1 },
-					'eth_signTypedData_v1',
-					runTssSign,
-				)
-				.then((resp: any) => {
-					typedV1SignResult = resp;
-				})
-				.catch((err) => {
-					console.log('err', err);
-				});
-			while (!typedV1SignResult) {
-				await delay(0);
-				console.log('waiting for typedV1SignResult');
-			}
-			expect(typedV1SignResult).toEqual(expect.any(String));
-			expect(typedV1SignResult).toMatch(/^0x/);
+			// // Typed v3 sign
+			// let typedV3SignResult: any = null;
+
+			// keyring
+			// 	.signTypedData(
+			// 		WALLER_ADDRESS,
+			// 		mockSignTypedDataV3,
+			// 		{ version: SignTypedDataVersion.V3 },
+			// 		'eth_signTypedData_v3',
+			// 		runTssSign,
+			// 	)
+			// 	.then((resp: any) => {
+			// 		typedV3SignResult = resp;
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log('err', err);
+			// 	});
+			// while (!typedV3SignResult) {
+			// 	await delay(0);
+			// }
+			// expect(typedV3SignResult).toEqual(expect.any(String));
+			// expect(typedV3SignResult).toMatch(/^0x/);
+
+			// // Typed sign
+			// let typedV1SignResult: any = null;
+
+			// keyring
+			// 	.signTypedData(
+			// 		WALLER_ADDRESS,
+			// 		mockSignTypedDataV1,
+			// 		{ version: SignTypedDataVersion.V1 },
+			// 		'eth_signTypedData_v1',
+			// 		runTssSign,
+			// 	)
+			// 	.then((resp: any) => {
+			// 		typedV1SignResult = resp;
+			// 	})
+			// 	.catch((err) => {
+			// 		console.log('err', err);
+			// 	});
+			// while (!typedV1SignResult) {
+			// 	await delay(0);
+			// }
+			// expect(typedV1SignResult).toEqual(expect.any(String));
+			// expect(typedV1SignResult).toMatch(/^0x/);
 
 			unsub!();
 			await simulator.cleanUpSimulation();

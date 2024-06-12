@@ -179,14 +179,13 @@ class sdk2 {
 					}
 				},
 				(error) => {
-					console.log("Error getting keygen conversation", error);
+					console.log('Error getting keygen conversation', error);
 					if (keygenUnsub) {
 						keygenUnsub();
 					}
 				},
 			);
 		});
-		
 	};
 
 	public sign = async () => {
@@ -228,29 +227,8 @@ class sdk2 {
 							message.nonce
 						) {
 							if (p2 === null || p2._state === 0) {
-								let messageHash;
-								switch (conversation.signMetadata) {
-									case 'eth_transaction':
-									case 'legacy_transaction':
-										messageHash = keccak256(
-											'0x' + conversation.signMessage,
-										).toString('hex');
-										break;
-									case 'personal_sign':
-										let messageToSignBytes = Buffer.from(conversation.signMessage, 'hex');
-										let prefix = `\u0019Ethereum Signed Message:\n${messageToSignBytes.length}`;
-										let prefixBytes = Buffer.from(prefix, 'utf8');
-										let msg = Buffer.concat([prefixBytes, messageToSignBytes]);
-										messageHash = keccak256(msg).toString('hex');
-										break;
-									default:
-										messageHash = conversation.messageHash;
-								}
-
-								if (messageHash.startsWith('0x')) {
-									messageHash = messageHash.slice(2);
-								}
 								round = 1;
+								const messageHash = this._hashSignMsg(conversation);
 								p2 = new P2Signature(
 									conversation.sessionId,
 									fromHexStringToBytes(messageHash),
@@ -265,7 +243,7 @@ class sdk2 {
 								const nonce = _sodium.randombytes_buf(
 									_sodium.crypto_box_NONCEBYTES,
 								);
-								const encMessage = _sodium.to_base64(
+								const encMessage = Uint8ArrayTob64(
 									_sodium.crypto_box_easy(
 										_sodium.to_base64(
 											msg.msg_to_send,
@@ -292,13 +270,13 @@ class sdk2 {
 					}
 				},
 				(error) => {
-					console.log("Error getting sign conversation", error);
+					console.log('Error getting sign conversation', error);
 					if (signUnSub) {
 						signUnSub();
 					}
 				},
 			);
-			resolve(signUnSub)
+			resolve(signUnSub);
 		});
 	};
 
@@ -317,6 +295,35 @@ class sdk2 {
 				}
 			},
 		);
+	};
+
+	_hashSignMsg = (conversation: SignConversation) => {
+		let messageHash;
+		switch (conversation.signMetadata) {
+			case 'eth_transaction':
+			case 'legacy_transaction':
+				messageHash = keccak256(
+					'0x' + conversation.signMessage,
+				).toString('hex');
+				break;
+			case 'personal_sign':
+				let messageToSignBytes = Buffer.from(
+					conversation.signMessage,
+					'hex',
+				);
+				let prefix = `\x19Ethereum Signed Message:\n${messageToSignBytes.length}`;
+				let prefixBytes = Buffer.from(prefix, 'utf8');
+				let msg = Buffer.concat([prefixBytes, messageToSignBytes]);
+				messageHash = keccak256(msg).toString('hex');
+				break;
+			default:
+				messageHash = conversation.messageHash;
+		}
+
+		if (messageHash.startsWith('0x')) {
+			messageHash = messageHash.slice(2);
+		}
+		return messageHash;
 	};
 
 	_validateMessage = (conversation: SignConversation) => {
