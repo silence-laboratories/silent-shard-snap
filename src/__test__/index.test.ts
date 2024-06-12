@@ -6,7 +6,7 @@ import { DAPP_URL_STAGING, InternalMethod } from '../permissions';
 import * as simulator from './simulator';
 import { SimpleKeyring } from '../snap/keyring';
 import { DistributedKey, PairingData } from '../types';
-import { delay } from '../snap/utils';
+import { delay, getAddressFromDistributedKey } from '../snap/utils';
 
 import { TransactionFactory } from '@ethereumjs/tx';
 import { Common, Hardfork } from '@ethereumjs/common';
@@ -16,15 +16,14 @@ import {
 	recoverTypedSignature,
 } from '@metamask/eth-sig-util';
 import {
-	WALLER_ADDRESS,
-	mockLegacyTx,
-	MOCK_WALLET_ACCOUNT,
 	genMockRunTssSign,
 	mockPersonalMsg,
 	mockSignTypedDataV4,
-	mockEip1559Tx,
 	mockSignTypedDataV3,
 	mockSignTypedDataV1,
+	genMockKeyring,
+	genMockLegacyTx,
+	genMockEip1559Tx,
 } from './mocks';
 
 const ORIGIN = DAPP_URL_STAGING;
@@ -44,13 +43,6 @@ interface QrCode {
 }
 
 describe('test rpc requests to Snap', () => {
-	it('tss_isPaired should be failed before pairing', async () => {
-		const recoveredAddr = recoverPersonalSignature({			
-			data: "0x4578616d706c652060706572736f6e616c5f7369676e60206d657373616765",
-			signature: "0x63406196c7e96c56af7d98f92c365207eb7033f156a7e7a36a092ac68183407b74c7ae2f925223de2833cfe20915c254a95d63c2e3014dd92a918fa35d316df71b",
-		  });
-		console.log('recoveredAddr', recoveredAddr);
-	});
 	describe('wrong permission and rejection', () => {
 		it('throws an error if origin does not have permission', async () => {
 			const { request } = await installSnap();
@@ -197,105 +189,98 @@ describe('test rpc requests to Snap', () => {
 				distributedKey: DistributedKey;
 				pairingData: PairingData;
 			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						...MOCK_WALLET_ACCOUNT,
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
 			const pairingData = keyshareResult.pairingData;
 			const runTssSign = genMockRunTssSign(pairingData);
+			const walletAddress = getAddressFromDistributedKey(
+				keyshareResult.distributedKey,
+			);
 
-			// // Eip1559 sign
-			// let eip1559SignResult: any = null;
-			// keyring
-			// 	.signTransaction(mockEip1559Tx, runTssSign)
-			// 	.then((resp: any) => {
-			// 		eip1559SignResult = resp;
-			// 	})
-			// 	.catch((err) => {
-			// 		console.log('err', err);
-			// 	});
-			// const unsub = await simulator.sign();
+			const simpleKeyring = genMockKeyring(
+				keyshareResult.distributedKey,
+				walletAddress,
+			);
+			const keyring = new SimpleKeyring(simpleKeyring);
 
-			// while (!eip1559SignResult) {
-			// 	await delay(0);
-			// }
+			// Eip1559 sign
+			let eip1559SignResult: any = null;
+			const mockEip1559Tx: any = genMockEip1559Tx(walletAddress);
+			const unsub = await simulator.sign();
+			keyring
+				.signTransaction(mockEip1559Tx, runTssSign)
+				.then((resp: any) => {
+					eip1559SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
 
-			// for (const key in mockEip1559Tx) {
-			// 	if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
-			// 		expect(eip1559SignResult[key]).toEqual(mockEip1559Tx[key]);
-			// 	}
-			// }
+			while (!eip1559SignResult) {
+				await delay(0);
+			}
 
-			// const common = Common.custom(
-			// 	{ chainId: eip1559SignResult.chainId },
-			// 	{
-			// 		hardfork:
-			// 			eip1559SignResult.maxPriorityFeePerGas ||
-			// 			eip1559SignResult.maxFeePerGas
-			// 				? Hardfork.London
-			// 				: Hardfork.Istanbul,
-			// 	},
-			// );
-			// let eip1559tx = TransactionFactory.fromTxData(eip1559SignResult, {
-			// 	common,
-			// });
-			// expect(eip1559tx.verifySignature()).toEqual(true);
+			for (const key in mockEip1559Tx) {
+				if (Object.prototype.hasOwnProperty.call(mockEip1559Tx, key)) {
+					expect(eip1559SignResult[key]).toEqual(mockEip1559Tx[key]);
+				}
+			}
 
-			// // Legacy sign
-			// let legacySignResult: any = null;
-			// keyring
-			// 	.signTransaction(mockLegacyTx, runTssSign)
-			// 	.then((resp: any) => {
-			// 		legacySignResult = resp;
-			// 	})
-			// 	.catch((err) => {
-			// 		console.log('err', err);
-			// 	});
+			const common = Common.custom(
+				{ chainId: eip1559SignResult.chainId },
+				{
+					hardfork:
+						eip1559SignResult.maxPriorityFeePerGas ||
+						eip1559SignResult.maxFeePerGas
+							? Hardfork.London
+							: Hardfork.Istanbul,
+				},
+			);
+			let eip1559tx = TransactionFactory.fromTxData(eip1559SignResult, {
+				common,
+			});
+			expect(eip1559tx.verifySignature()).toEqual(true);
 
-			// while (!legacySignResult) {
-			// 	await delay(0);
-			// }
+			// Legacy sign
+			let legacySignResult: any = null;
+			const mockLegacyTx: any = genMockLegacyTx(walletAddress);
+			keyring
+				.signTransaction(mockLegacyTx, runTssSign)
+				.then((resp: any) => {
+					legacySignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
 
-			// for (const key in mockLegacyTx) {
-			// 	if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
-			// 		expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
-			// 	}
-			// }
+			while (!legacySignResult) {
+				await delay(0);
+			}
 
-			// const commonLegacy = Common.custom(
-			// 	{ chainId: legacySignResult.chainId },
-			// 	{
-			// 		hardfork:
-			// 			legacySignResult.maxPriorityFeePerGas ||
-			// 			legacySignResult.maxFeePerGas
-			// 				? Hardfork.London
-			// 				: Hardfork.Istanbul,
-			// 	},
-			// );
-			// let legacyTx = TransactionFactory.fromTxData(legacySignResult, {
-			// 	common: commonLegacy,
-			// });
-			// expect(legacyTx.verifySignature()).toEqual(true);
+			for (const key in mockLegacyTx) {
+				if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
+					expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
+				}
+			}
+
+			const commonLegacy = Common.custom(
+				{ chainId: legacySignResult.chainId },
+				{
+					hardfork:
+						legacySignResult.maxPriorityFeePerGas ||
+						legacySignResult.maxFeePerGas
+							? Hardfork.London
+							: Hardfork.Istanbul,
+				},
+			);
+			let legacyTx = TransactionFactory.fromTxData(legacySignResult, {
+				common: commonLegacy,
+			});
+			expect(legacyTx.verifySignature()).toEqual(true);
 
 			// Personal sign
-			let personalSignResult: any = null;
-			const unsub = await simulator.sign();
-			console.log("mockPersonalMsg", mockPersonalMsg)
+			let personalSignResult: string | null = null;
 			keyring
-				.signPersonalMessage(
-					WALLER_ADDRESS,
-					mockPersonalMsg,
-					runTssSign,
-				)
-				.then((resp: any) => {
+				.signPersonalMessage(walletAddress, mockPersonalMsg, runTssSign)
+				.then((resp: string) => {
 					personalSignResult = resp;
 				})
 				.catch((err) => {
@@ -307,83 +292,105 @@ describe('test rpc requests to Snap', () => {
 			expect(personalSignResult).toEqual(expect.any(String));
 			expect(personalSignResult).toMatch(/^0x/);
 
-
-
 			const recoveredAddr = recoverPersonalSignature({
-				// data: '0xaf1dee894786c304604a039b041463c9ab8defb393403ea03cf2c85b1eb8cbfd',
 				data: mockPersonalMsg,
 				signature: personalSignResult,
-			  });
-			console.log('recoveredAddrrecoveredAddrrecoveredAddrrecoveredAddrrecoveredAddr', recoveredAddr);
+			});
 
-			// // Typed v4 sign
-			// let typedV4SignResult: any = null;
+			expect(recoveredAddr).toEqual(walletAddress);
 
-			// keyring
-			// 	.signTypedData(
-			// 		WALLER_ADDRESS,
-			// 		mockSignTypedDataV4,
-			// 		{ version: SignTypedDataVersion.V4 },
-			// 		'eth_signTypedData_v4',
-			// 		runTssSign,
-			// 	)
-			// 	.then((resp: any) => {
-			// 		typedV4SignResult = resp;
-			// 	})
-			// 	.catch((err) => {
-			// 		console.log('err', err);
-			// 	});
-			// while (!typedV4SignResult) {
-			// 	await delay(0);
-			// }
-			// expect(typedV4SignResult).toEqual(expect.any(String));
-			// expect(typedV4SignResult).toMatch(/^0x/);
+			// Typed v4 sign
+			let typedV4SignResult: string | null = null;
 
-			// // Typed v3 sign
-			// let typedV3SignResult: any = null;
+			keyring
+				.signTypedData(
+					walletAddress,
+					mockSignTypedDataV4,
+					{ version: SignTypedDataVersion.V4 },
+					'eth_signTypedData_v4',
+					runTssSign,
+				)
+				.then((resp: string) => {
+					typedV4SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!typedV4SignResult) {
+				await delay(0);
+			}
+			expect(typedV4SignResult).toEqual(expect.any(String));
+			expect(typedV4SignResult).toMatch(/^0x/);
 
-			// keyring
-			// 	.signTypedData(
-			// 		WALLER_ADDRESS,
-			// 		mockSignTypedDataV3,
-			// 		{ version: SignTypedDataVersion.V3 },
-			// 		'eth_signTypedData_v3',
-			// 		runTssSign,
-			// 	)
-			// 	.then((resp: any) => {
-			// 		typedV3SignResult = resp;
-			// 	})
-			// 	.catch((err) => {
-			// 		console.log('err', err);
-			// 	});
-			// while (!typedV3SignResult) {
-			// 	await delay(0);
-			// }
-			// expect(typedV3SignResult).toEqual(expect.any(String));
-			// expect(typedV3SignResult).toMatch(/^0x/);
+			const v4RecoveredAddr = recoverTypedSignature({
+				data: mockSignTypedDataV4 as any,
+				signature: typedV4SignResult,
+				version: SignTypedDataVersion.V4,
+			});
 
-			// // Typed sign
-			// let typedV1SignResult: any = null;
+			expect(v4RecoveredAddr).toEqual(walletAddress);
 
-			// keyring
-			// 	.signTypedData(
-			// 		WALLER_ADDRESS,
-			// 		mockSignTypedDataV1,
-			// 		{ version: SignTypedDataVersion.V1 },
-			// 		'eth_signTypedData_v1',
-			// 		runTssSign,
-			// 	)
-			// 	.then((resp: any) => {
-			// 		typedV1SignResult = resp;
-			// 	})
-			// 	.catch((err) => {
-			// 		console.log('err', err);
-			// 	});
-			// while (!typedV1SignResult) {
-			// 	await delay(0);
-			// }
-			// expect(typedV1SignResult).toEqual(expect.any(String));
-			// expect(typedV1SignResult).toMatch(/^0x/);
+			// Typed v3 sign
+			let typedV3SignResult: string | null = null;
+
+			keyring
+				.signTypedData(
+					walletAddress,
+					mockSignTypedDataV3,
+					{ version: SignTypedDataVersion.V3 },
+					'eth_signTypedData_v3',
+					runTssSign,
+				)
+				.then((resp: string) => {
+					typedV3SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!typedV3SignResult) {
+				await delay(0);
+			}
+			expect(typedV3SignResult).toEqual(expect.any(String));
+			expect(typedV3SignResult).toMatch(/^0x/);
+
+			const v3RecoveredAddr = recoverTypedSignature({
+				data: mockSignTypedDataV3 as any,
+				signature: typedV3SignResult,
+				version: SignTypedDataVersion.V3,
+			});
+
+			expect(v3RecoveredAddr).toEqual(walletAddress);
+
+			// Typed sign
+			let typedV1SignResult: string | null = null;
+
+			keyring
+				.signTypedData(
+					walletAddress,
+					mockSignTypedDataV1,
+					{ version: SignTypedDataVersion.V1 },
+					'eth_signTypedData_v1',
+					runTssSign,
+				)
+				.then((resp: string) => {
+					typedV1SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!typedV1SignResult) {
+				await delay(0);
+			}
+			expect(typedV1SignResult).toEqual(expect.any(String));
+			expect(typedV1SignResult).toMatch(/^0x/);
+
+			const v1RecoveredAddr = recoverTypedSignature({
+				data: mockSignTypedDataV1,
+				signature: typedV1SignResult,
+				version: SignTypedDataVersion.V1,
+			});
+
+			expect(v1RecoveredAddr).toEqual(walletAddress);
 
 			unsub!();
 			await simulator.cleanUpSimulation();
@@ -392,36 +399,5 @@ describe('test rpc requests to Snap', () => {
 
 	// TODO: We only able to test this if @metamask/snaps-jest package supports Keyring API
 	// it('tss_runRePairing should be success', async () => {
-	// const initRePairingReq = request({
-	// 	method: InternalMethod.TssInitPairing,
-	// 	origin: ORIGIN,
-	// 	params: [{ isRePair: true }],
-	// });
-
-	// const initRePairingJson: any = (await initRePairingReq).response;
-	// const initRePairingResult =
-	// 	initRePairingJson.result as InitPairingResponse;
-	// const reQrCode = initRePairingResult.qrCode;
-	// const reQrCodeObj = JSON.parse(reQrCode) as QrCode;
-
-	// expect(reQrCodeObj.pairingId).toEqual(expect.any(String));
-	// expect(reQrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-	// expect(reQrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-	// await simulator.signIn();
-	// await simulator.pairing(reQrCode, true);
-
-	// const runRePairingReq = request({
-	// 	method: InternalMethod.TssRunRePairing,
-	// 	origin: ORIGIN,
-	// });
-
-	// const runRePairingJson: any = (await runRePairingReq).response;
-	// const runRePairingResult =
-	// 	runRePairingJson.result as RunRePairingResponse;
-	// expect(runRePairingResult.deviceName).toEqual(DEVICE_NAME);
-	// expect(runRePairingResult.newAccountAddress).toEqual(
-	// 	expect.any(String),
-	// );
 	// });
 });

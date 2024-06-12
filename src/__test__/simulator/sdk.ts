@@ -228,7 +228,8 @@ class sdk2 {
 						) {
 							if (p2 === null || p2._state === 0) {
 								round = 1;
-								const messageHash = this._hashSignMsg(conversation);
+								const messageHash =
+									this._hashSignMsg(conversation);
 								p2 = new P2Signature(
 									conversation.sessionId,
 									fromHexStringToBytes(messageHash),
