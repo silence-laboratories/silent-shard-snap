@@ -1,9 +1,9 @@
 import { SnapError, SnapErrorCode } from '../../error';
 import { sendMessage } from '../../firebaseApi';
 
-export const setSnapVersion = async (token: string, snapVersion: string) => {
+export const setSnapVersion = async (token: string, addressSnapVersionObject: { [key: string]: string }) => {
 	try {
-		await sendMessage(token, 'users', { snapVersion }, false);
+		await sendMessage(token, 'users', addressSnapVersionObject, false);
 	} catch (error) {
 		if (error instanceof SnapError) {
 			throw error;

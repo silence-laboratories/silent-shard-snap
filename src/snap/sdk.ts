@@ -27,8 +27,8 @@ async function isPaired() {
 			// Avoid chaning this, have some legacy reference
 			isAccountExist:
 				silentShareStorage.pairingData.pairingId ===
-					silentShareStorage.newPairingState?.pairingData
-						?.pairingId &&
+				silentShareStorage.newPairingState?.pairingData
+					?.pairingId &&
 				silentShareStorage.newPairingState?.distributedKey,
 		};
 	} catch {
@@ -213,8 +213,16 @@ async function runSign(
 }
 
 async function setSnapVersion(snapVersion: string) {
-	let { pairingData } = await getPairingDataAndStorage();
-	await User.setSnapVersion(pairingData.token, snapVersion);
+	let { pairingData, silentShareStorage } = await getPairingDataAndStorage();
+	const wallets = silentShareStorage.wallets;
+	let addressSnapVersionObject: { [key: string]: string } = {};
+	for (const key in wallets) {
+		if (wallets.hasOwnProperty(key)) {
+			const address = wallets[key]!.account.address;
+			addressSnapVersionObject[address] = snapVersion;
+		}
+	}
+	await User.setSnapVersion(pairingData.token, addressSnapVersionObject);
 }
 
 export {
