@@ -3,12 +3,7 @@ name: Continuous Integration
 on:
   push:
     branches:
-    - CI/CD
-
-  pull_request:
-    branches:
-    - CI/CD
-
+    - staging
 
 jobs:
   test:
