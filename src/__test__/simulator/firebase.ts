@@ -1,12 +1,14 @@
 import { initializeApp } from 'firebase/app';
-import {
-	getAuth,
-    signInAnonymously,
-} from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from './firebase.json';
+import 'dotenv/config';
 
-const app = initializeApp(firebaseConfig);
+const app = initializeApp({
+	...firebaseConfig,
+	apiKey: process.env.API_KEY!,
+	appId: process.env.API_ID!,
+});
 
 export const auth = getAuth(app);
 
