@@ -15,11 +15,7 @@ import {
 	uint8ArrayToUtf8String,
 } from '../../snap/utils';
 import keccak256 from 'keccak256';
-import {
-	SignTypedDataVersion,
-	TypedDataUtils,
-	typedSignatureHash,
-} from '@metamask/eth-sig-util';
+
 import {
 	BackupConversation,
 	KeygenConversation,
@@ -47,8 +43,6 @@ class sdk2 {
 		delete this.uid;
 		delete this.pairingId;
 	};
-
-	private signUnSub?: () => any;
 
 	public setUid(theUid: string | undefined) {
 		this.uid = theUid;
@@ -111,7 +105,7 @@ class sdk2 {
 		let p2: P2KeyGen | null = null;
 		let round = 1;
 		await new Promise<void>((resolve) => {
-			let keygenUnsub = onSnapshot(
+			const keygenUnsub = onSnapshot(
 				doc(db, 'keygen', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
@@ -205,7 +199,7 @@ class sdk2 {
 		let p2: P2Signature | null = null;
 		let round = 1;
 		return await new Promise<Unsubscribe>((resolve) => {
-			let signUnSub = onSnapshot(
+			const signUnSub = onSnapshot(
 				doc(db, 'sign', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
@@ -282,8 +276,7 @@ class sdk2 {
 	};
 
 	public backup = () => {
-		let backupUnsub: any;
-		backupUnsub = onSnapshot(
+		const backupUnsub = onSnapshot(
 			doc(db, 'backup', this.uid!),
 			async (querySnapshot) => {
 				const conversation = querySnapshot.data() as BackupConversation;

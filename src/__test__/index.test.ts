@@ -24,6 +24,8 @@ import {
 	genMockKeyring,
 	genMockLegacyTx,
 	genMockEip1559Tx,
+	Eip1559Tx,
+	LegacyTx,
 } from './mocks';
 
 const ORIGIN = DAPP_URL_STAGING;
@@ -202,8 +204,8 @@ describe('test rpc requests to Snap', () => {
 			const keyring = new SimpleKeyring(simpleKeyring);
 
 			// Eip1559 sign
-			let eip1559SignResult: any = null;
-			const mockEip1559Tx: any = genMockEip1559Tx(walletAddress);
+			let eip1559SignResult: Eip1559Tx | null = null;
+			const mockEip1559Tx: Eip1559Tx = genMockEip1559Tx(walletAddress);
 			const unsub = await simulator.sign();
 			keyring
 				.signTransaction(mockEip1559Tx, runTssSign)
@@ -215,6 +217,7 @@ describe('test rpc requests to Snap', () => {
 				});
 
 			while (!eip1559SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
 			}
 
@@ -225,11 +228,11 @@ describe('test rpc requests to Snap', () => {
 			}
 
 			const common = Common.custom(
-				{ chainId: eip1559SignResult.chainId },
+				{ chainId: parseInt((eip1559SignResult as Eip1559Tx).chainId, 16) },
 				{
 					hardfork:
-						eip1559SignResult.maxPriorityFeePerGas ||
-						eip1559SignResult.maxFeePerGas
+						(eip1559SignResult as Eip1559Tx).maxPriorityFeePerGas ||
+						(eip1559SignResult as Eip1559Tx).maxFeePerGas
 							? Hardfork.London
 							: Hardfork.Istanbul,
 				},
@@ -240,8 +243,8 @@ describe('test rpc requests to Snap', () => {
 			expect(eip1559tx.verifySignature()).toEqual(true);
 
 			// Legacy sign
-			let legacySignResult: any = null;
-			const mockLegacyTx: any = genMockLegacyTx(walletAddress);
+			let legacySignResult: LegacyTx | null = null;
+			const mockLegacyTx: LegacyTx = genMockLegacyTx(walletAddress);
 			keyring
 				.signTransaction(mockLegacyTx, runTssSign)
 				.then((resp: any) => {
@@ -252,6 +255,7 @@ describe('test rpc requests to Snap', () => {
 				});
 
 			while (!legacySignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
 			}
 
@@ -262,11 +266,11 @@ describe('test rpc requests to Snap', () => {
 			}
 
 			const commonLegacy = Common.custom(
-				{ chainId: legacySignResult.chainId },
+				{ chainId: parseInt((legacySignResult as LegacyTx).chainId, 16) },
 				{
 					hardfork:
-						legacySignResult.maxPriorityFeePerGas ||
-						legacySignResult.maxFeePerGas
+						(legacySignResult as LegacyTx).maxPriorityFeePerGas ||
+						(legacySignResult as LegacyTx).maxFeePerGas
 							? Hardfork.London
 							: Hardfork.Istanbul,
 				},
@@ -287,6 +291,7 @@ describe('test rpc requests to Snap', () => {
 					console.log('err', err);
 				});
 			while (!personalSignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
 			}
 			expect(personalSignResult).toEqual(expect.any(String));
@@ -317,6 +322,7 @@ describe('test rpc requests to Snap', () => {
 					console.log('err', err);
 				});
 			while (!typedV4SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
 			}
 			expect(typedV4SignResult).toEqual(expect.any(String));
@@ -348,6 +354,7 @@ describe('test rpc requests to Snap', () => {
 					console.log('err', err);
 				});
 			while (!typedV3SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
 			}
 			expect(typedV3SignResult).toEqual(expect.any(String));
@@ -379,6 +386,7 @@ describe('test rpc requests to Snap', () => {
 					console.log('err', err);
 				});
 			while (!typedV1SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
 			}
 			expect(typedV1SignResult).toEqual(expect.any(String));

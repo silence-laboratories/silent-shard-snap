@@ -77,7 +77,20 @@ export const genMockRunTssSign =
 			accountId,
 		);
 	};
-
+export interface Eip1559Tx {
+	[key: string]: string | never[];
+	type: string;
+	nonce: string;
+	to: string;
+	from: string;
+	value: string;
+	data: string;
+	gasLimit: string;
+	maxPriorityFeePerGas: string;
+	maxFeePerGas: string;
+	accessList: never[];
+	chainId: string;
+}
 export const genMockEip1559Tx = (address: string) => {
 	return {
 		type: '0x2',
@@ -94,6 +107,18 @@ export const genMockEip1559Tx = (address: string) => {
 	};
 };
 
+export interface LegacyTx {
+	[key: string]: string
+	type: string;
+	nonce: string;
+	to: string;
+	from: string;
+	value: string;
+	data: string;
+	gasLimit: string;
+	gasPrice: string;
+	chainId: string;
+}
 export const genMockLegacyTx = (address: string) => {
 	return {
 		type: '0x0',
@@ -205,21 +230,21 @@ export const mockSignTypedDataV4 = {
 
 export const mockSignTypedDataV3 = {
 	types: {
-		"EIP712Domain": [
+		EIP712Domain: [
 			{ name: 'name', type: 'string' },
 			{ name: 'version', type: 'string' },
 			{ name: 'chainId', type: 'uint256' },
 			{ name: 'verifyingContract', type: 'address' },
-		  ],
-		  "Person": [
+		],
+		Person: [
 			{ name: 'name', type: 'string' },
 			{ name: 'wallet', type: 'address' },
-		  ],
-		  "Mail": [
+		],
+		Mail: [
 			{ name: 'from', type: 'Person' },
 			{ name: 'to', type: 'Person' },
 			{ name: 'contents', type: 'string' },
-		  ],
+		],
 	},
 	primaryType: 'Mail',
 	domain: {
