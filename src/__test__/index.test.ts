@@ -117,7 +117,7 @@ describe('test rpc requests to Snap', () => {
 			});
 		});
 
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, eip1559 tx signing should be success', async () => {
+		it('tss_initPairing, tss_runPairing, tss_runKeygen, all keyring signing methods should be success', async () => {
 			const { request } = await installSnap();
 			// Test init pairing
 			const initPairingReq = request({

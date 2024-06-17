@@ -3,7 +3,6 @@ import { DistributedKey, KeyringState, SignMetadata } from '../types';
 import { fromHexStringToBytes } from '../snap/utils';
 import { SnapError, SnapErrorCode } from '../error';
 import * as SignAction from '../snap/actions/sign';
-import { Json } from '@metamask/utils';
 
 export const TO_ADDRESS = '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb';
 
