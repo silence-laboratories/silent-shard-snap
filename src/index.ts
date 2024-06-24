@@ -9,7 +9,7 @@ import {
 import * as sdk from './snap/sdk';
 import { deleteStorage, getSilentShareStorage } from './snap/storage';
 import { isPaired } from './snap/sdk';
-import { panel, text, heading, divider } from '@metamask/snaps-ui';
+import { panel, text, heading, divider } from '@metamask/snaps-sdk';
 import { SnapError, SnapErrorCode } from './error';
 import { handleKeyringRequest } from '@metamask/keyring-api';
 import { SimpleKeyring } from './snap/keyring';
