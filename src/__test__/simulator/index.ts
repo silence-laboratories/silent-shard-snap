@@ -16,6 +16,7 @@ export const cleanUpSimulation = async () => {
 	try {
 		await removeUser();
 		sdk.cleanState();
+		console.log("cleanUpSimulation sim done");
 	} catch (error) {
 		console.error("cleanUpSimulation sim err", error);
 	}
@@ -39,7 +40,7 @@ export const keygen = async () => {
 
 export const sign = async () => {
 	try {
-		await sdk.sign();
+		return await sdk.sign();
 	} catch (error) {
 		console.error("sign sim err",error);
 	}

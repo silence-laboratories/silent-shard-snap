@@ -136,7 +136,7 @@ async function runKeygen() {
 	let accountId = Object.keys(wallets).length + 1;
 	let x1 = fromHexStringToBytes(await requestEntropy());
 	let result = await KeyGenAction.keygen(pairingData, accountId, x1);
-	saveSilentShareStorage({
+	await saveSilentShareStorage({
 		...silentShareStorage,
 		newPairingState: {
 			pairingData: null,
@@ -160,10 +160,22 @@ async function runKeygen() {
 
 async function runBackup() {
 	let { pairingData, silentShareStorage } = await getPairingDataAndStorage();
-	const encryptedMessage = await encMessage(
-		JSON.stringify(silentShareStorage.newPairingState?.distributedKey),
-	);
-	await Backup.backup(pairingData, encryptedMessage);
+	if (silentShareStorage.newPairingState?.distributedKey) {
+		const encryptedMessage = await encMessage(
+			JSON.stringify(silentShareStorage.newPairingState.distributedKey),
+		);
+		await Backup.backup(
+			pairingData,
+			encryptedMessage,
+			getAddressFromDistributedKey(
+				silentShareStorage.newPairingState.distributedKey,
+			),
+		);
+	} else
+		throw new SnapError(
+			'Distributed key not found',
+			SnapErrorCode.BackupFailed,
+		);
 }
 
 async function runSign(
@@ -181,7 +193,7 @@ async function runSign(
 		message = message.slice(2);
 	}
 	let { pairingData } = await getPairingDataAndStorage();
-	let messageHash = fromHexStringToBytes(messageHashHex);
+	const messageHash = fromHexStringToBytes(messageHashHex);
 	if (messageHash.length !== 32) {
 		throw new SnapError(
 			'Invalid length of messageHash, should be 32 bytes',

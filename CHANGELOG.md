@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.2.9]
+- New runBackup rpc method to send backup, add address and walletId to backup [`35`](https://github.com/silence-laboratories/silent-shard-snap/pull/35) [`36`](https://github.com/silence-laboratories/silent-shard-snap/pull/36)
+- Remove load balancer [`37`]
+(https://github.com/silence-laboratories/silent-shard-snap/pull/37)
+
+## [1.2.8]
 - Set snap version using update snap RPC method [`#31`](https://github.com/silence-laboratories/silent-shard-snap/pull/31)
 - E2e test [`#28`](https://github.com/silence-laboratories/silent-shard-snap/pull/28)
 - Mm 405 use load balancer endpoints of firebase function for snap [`#29`](https://github.com/silence-laboratories/silent-shard-snap/pull/29)
@@ -14,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add pairingRemark to handle failure cases [`#26`](https://github.com/silence-laboratories/silent-shard-snap/pull/26)
-- Complete set up script to build staging and production environment se… [`#24`](https://github.com/silence-laboratories/silent-shard-snap/pull/24)
+- Complete set up script to build staging and production environment [`#24`](https://github.com/silence-laboratories/silent-shard-snap/pull/24)
 - Add copyright header to source files [`#20`](https://github.com/silence-laboratories/silent-shard-snap/pull/20)
 - Add license [`#19`](https://github.com/silence-laboratories/silent-shard-snap/pull/19)
 - Repairing flow added [`10c8c56`](https://github.com/silence-laboratories/silent-shard-snap/commit/10c8c56e012d6422ca4dcd3efee60076207b7410)
