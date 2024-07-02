@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add pairingRemark to handle failure cases [`#26`](https://github.com/silence-laboratories/silent-shard-snap/pull/26)
-- Complete set up script to build staging and production environment se… [`#24`](https://github.com/silence-laboratories/silent-shard-snap/pull/24)
+- Complete set up script to build staging and production environment [`#24`](https://github.com/silence-laboratories/silent-shard-snap/pull/24)
 - Add copyright header to source files [`#20`](https://github.com/silence-laboratories/silent-shard-snap/pull/20)
 - Add license [`#19`](https://github.com/silence-laboratories/silent-shard-snap/pull/19)
 - Repairing flow added [`10c8c56`](https://github.com/silence-laboratories/silent-shard-snap/commit/10c8c56e012d6422ca4dcd3efee60076207b7410)
