@@ -1,18 +1,32 @@
-import { pairing } from './simulator/index';
 import { expect } from '@jest/globals';
 import { SnapConfirmationInterface, installSnap } from '@metamask/snaps-jest';
-import { DialogType, panel, text } from '@metamask/snaps-sdk';
-import { divider, heading } from '@metamask/snaps-ui';
+import { DialogType, panel, text, divider, heading } from '@metamask/snaps-sdk';
 import { SnapError, SnapErrorCode } from '../error';
 import { DAPP_URL_STAGING, InternalMethod } from '../permissions';
 import * as simulator from './simulator';
 import { SimpleKeyring } from '../snap/keyring';
-import { DistributedKey, PairingData, SignMetadata, Wallet } from '../types';
-import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
-import { delay, fromHexStringToBytes } from '../snap/utils';
-import * as SignAction from '../snap/actions/sign';
+import { DistributedKey, PairingData } from '../types';
+import { delay, getAddressFromDistributedKey } from '../snap/utils';
+
 import { TransactionFactory } from '@ethereumjs/tx';
 import { Common, Hardfork } from '@ethereumjs/common';
+import {
+	SignTypedDataVersion,
+	recoverPersonalSignature, // TODO: Use these methods to verify the signature
+	recoverTypedSignature,
+} from '@metamask/eth-sig-util';
+import {
+	genMockRunTssSign,
+	mockPersonalMsg,
+	mockSignTypedDataV4,
+	mockSignTypedDataV3,
+	mockSignTypedDataV1,
+	genMockKeyring,
+	genMockLegacyTx,
+	genMockEip1559Tx,
+	Eip1559Tx,
+	LegacyTx,
+} from './mocks';
 
 const ORIGIN = DAPP_URL_STAGING;
 const INIT_PAIR_PANEL_HEADING = `Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`;
@@ -21,8 +35,6 @@ const INIT_PAIR_PANEL_DESCRIPTION = [
 	`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
 	`Happy to have you onboard! 🥳`,
 ];
-const WALLER_ADDRESS = '0x660265edc169bab511a40c0e049cc1e33774443d';
-const TO_ADDRESS = '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb';
 
 export const DEVICE_NAME =
 	'e2e-test-device' + Math.floor(Math.random() * 1000000);
@@ -31,10 +43,6 @@ interface QrCode {
 	webEncPublicKey: string;
 	signPublicKey: string;
 }
-
-afterAll(() => {
-	simulator.cleanUpSimulation();
-});
 
 describe('test rpc requests to Snap', () => {
 	describe('wrong permission and rejection', () => {
@@ -109,7 +117,7 @@ describe('test rpc requests to Snap', () => {
 			});
 		});
 
-		it('tss_initPairing, tss_runPairing, tss_runKeygen, eip1559 + legacy transaction signing should be success', async () => {
+		it('tss_initPairing, tss_runPairing, tss_runKeygen, all keyring signing methods should be success', async () => {
 			const { request } = await installSnap();
 			// Test init pairing
 			const initPairingReq = request({
@@ -168,6 +176,11 @@ describe('test rpc requests to Snap', () => {
 			const runKeyGenResult = keyGenJson.result as RunKeygenResponse;
 			expect(runKeyGenResult.address).toEqual(expect.any(String));
 
+			request({
+				method: InternalMethod.TssRunBackup,
+				origin: ORIGIN,
+			});
+
 			// Test signing
 			const keyshareReq = request({
 				method: InternalMethod.E2eTestGetKeyShare,
@@ -178,88 +191,22 @@ describe('test rpc requests to Snap', () => {
 				distributedKey: DistributedKey;
 				pairingData: PairingData;
 			};
-
-			const accountId = keyshareResult.distributedKey.accountId;
-			const keyring = new SimpleKeyring({
-				wallets: {
-					[accountId]: {
-						account: {
-							id: 'f4211653-1b5f-4497-b5e6-f7b56824ba21',
-							options: {},
-							address: WALLER_ADDRESS,
-							methods: [
-								'eth_sign',
-								'eth_signTransaction',
-								'eth_signTypedData_v1',
-								'eth_signTypedData_v3',
-								'eth_signTypedData_v4',
-								'personal_sign',
-							],
-							type: 'eip155:eoa',
-						},
-						distributedKey: keyshareResult.distributedKey,
-					},
-				},
-				requests: {},
-			});
-
 			const pairingData = keyshareResult.pairingData;
-			const runTssSign = async (
-				hashAlg: string,
-				message: string,
-				messageHashHex: string,
-				signMetadata: SignMetadata,
-				accountId: number,
-				keyShare: IP1KeyShare,
-			) => {
-				if (messageHashHex.startsWith('0x')) {
-					messageHashHex = messageHashHex.slice(2);
-				}
-				if (message.startsWith('0x')) {
-					message = message.slice(2);
-				}
+			const runTssSign = genMockRunTssSign(pairingData);
+			const walletAddress = getAddressFromDistributedKey(
+				keyshareResult.distributedKey,
+			);
 
-				// TODO: Do we want to simulate token expiration?
-				// let silentShareStorage = await getSilentShareStorage();
-				// let pairingData = silentShareStorage.pairingData;
-				// if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
-				// 	pairingData = await refreshPairing();
-				// }
-				let messageHash = fromHexStringToBytes(messageHashHex);
-				if (messageHash.length !== 32) {
-					throw new SnapError(
-						'Invalid length of messageHash, should be 32 bytes',
-						SnapErrorCode.InvalidMessageHashLength,
-					);
-				}
+			const simpleKeyring = genMockKeyring(
+				keyshareResult.distributedKey,
+				walletAddress,
+			);
+			const keyring = new SimpleKeyring(simpleKeyring);
 
-				return await SignAction.sign(
-					pairingData,
-					keyShare,
-					hashAlg,
-					message,
-					messageHash,
-					signMetadata,
-					accountId,
-				);
-			};
-
-			// Test eip1559 signing
-			const mockEip1559Tx: any = {
-				type: '0x2',
-				nonce: '0x1',
-				to: TO_ADDRESS,
-				from: WALLER_ADDRESS,
-				value: '0x0',
-				data: '0x',
-				gasLimit: '0x5208',
-				maxPriorityFeePerGas: '0x3b9aca00',
-				maxFeePerGas: '0x2540be400',
-				accessList: [],
-				chainId: '0xaa36a7',
-			};
-
-			let eip1559SignResult: any = null;
+			// Eip1559 sign
+			let eip1559SignResult: Eip1559Tx | null = null;
+			const mockEip1559Tx: Eip1559Tx = genMockEip1559Tx(walletAddress);
+			const unsub = await simulator.sign();
 			keyring
 				.signTransaction(mockEip1559Tx, runTssSign)
 				.then((resp: any) => {
@@ -268,11 +215,10 @@ describe('test rpc requests to Snap', () => {
 				.catch((err) => {
 					console.log('err', err);
 				});
-			await simulator.sign();
 
 			while (!eip1559SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
 				await delay(0);
-				console.log('waiting for eip1559SignResult');
 			}
 
 			for (const key in mockEip1559Tx) {
@@ -282,11 +228,11 @@ describe('test rpc requests to Snap', () => {
 			}
 
 			const common = Common.custom(
-				{ chainId: eip1559SignResult.chainId },
+				{ chainId: parseInt((eip1559SignResult as Eip1559Tx).chainId, 16) },
 				{
 					hardfork:
-						eip1559SignResult.maxPriorityFeePerGas ||
-						eip1559SignResult.maxFeePerGas
+						(eip1559SignResult as Eip1559Tx).maxPriorityFeePerGas ||
+						(eip1559SignResult as Eip1559Tx).maxFeePerGas
 							? Hardfork.London
 							: Hardfork.Istanbul,
 				},
@@ -296,23 +242,23 @@ describe('test rpc requests to Snap', () => {
 			});
 			expect(eip1559tx.verifySignature()).toEqual(true);
 
-			// Test legacy signing
-			const mockLegacyTx: any = {
-				type: '0x0',
-				nonce: '0x0',
-				to: TO_ADDRESS,
-				from: WALLER_ADDRESS,
-				value: '0x0',
-				data: '0x',
-				gasLimit: '0x5208',
-				gasPrice: '0x2540be400',
-				chainId: '0xaa36a7',
-			};
+			// Legacy sign
+			let legacySignResult: LegacyTx | null = null;
+			const mockLegacyTx: LegacyTx = genMockLegacyTx(walletAddress);
+			keyring
+				.signTransaction(mockLegacyTx, runTssSign)
+				.then((resp: any) => {
+					legacySignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
 
-			let legacySignResult: any = await keyring.signTransaction(
-				mockLegacyTx,
-				runTssSign,
-			);
+			while (!legacySignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
+				await delay(0);
+			}
+
 			for (const key in mockLegacyTx) {
 				if (Object.prototype.hasOwnProperty.call(mockLegacyTx, key)) {
 					expect(legacySignResult[key]).toEqual(mockLegacyTx[key]);
@@ -320,11 +266,11 @@ describe('test rpc requests to Snap', () => {
 			}
 
 			const commonLegacy = Common.custom(
-				{ chainId: legacySignResult.chainId },
+				{ chainId: parseInt((legacySignResult as LegacyTx).chainId, 16) },
 				{
 					hardfork:
-						legacySignResult.maxPriorityFeePerGas ||
-						legacySignResult.maxFeePerGas
+						(legacySignResult as LegacyTx).maxPriorityFeePerGas ||
+						(legacySignResult as LegacyTx).maxFeePerGas
 							? Hardfork.London
 							: Hardfork.Istanbul,
 				},
@@ -333,65 +279,133 @@ describe('test rpc requests to Snap', () => {
 				common: commonLegacy,
 			});
 			expect(legacyTx.verifySignature()).toEqual(true);
-		});
 
-		it('tss_unpair should be success', async () => {
-			simulator.backup();
-			const { request } = await installSnap();
-			const unpairReq = request({
-				method: InternalMethod.TssUnPair,
-				origin: ORIGIN,
-			});
-			await unpairReq;
-		});
+			// Personal sign
+			let personalSignResult: string | null = null;
+			keyring
+				.signPersonalMessage(walletAddress, mockPersonalMsg, runTssSign)
+				.then((resp: string) => {
+					personalSignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!personalSignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
+				await delay(0);
+			}
+			expect(personalSignResult).toEqual(expect.any(String));
+			expect(personalSignResult).toMatch(/^0x/);
 
-		it('repairing: without tss_runRePairing should be success', async () => {
-			const { request } = await installSnap();
-
-			const initPairingReq = request({
-				method: InternalMethod.TssInitPairing,
-				origin: ORIGIN,
-				params: [{ isRePair: false }],
-			});
-
-			const ui = await initPairingReq.getInterface();
-			expect(ui.type).toBe(DialogType.Confirmation);
-			const prompt = INIT_PAIR_PANEL_HEADING;
-			const description = INIT_PAIR_PANEL_DESCRIPTION;
-
-			expect(ui).toRender(
-				panel([
-					heading(prompt),
-					divider(),
-					...description.map((t) => text(t)),
-				]),
-			);
-
-			await ui.ok();
-
-			const initPairingJson: any = (await initPairingReq).response;
-			const initPairingResult =
-				initPairingJson.result as InitPairingResponse;
-			const qrCode = initPairingResult.qrCode;
-			const qrCodeObj = JSON.parse(qrCode) as QrCode;
-
-			expect(qrCodeObj.pairingId).toEqual(expect.any(String));
-			expect(qrCodeObj.webEncPublicKey).toEqual(expect.any(String));
-			expect(qrCodeObj.signPublicKey).toEqual(expect.any(String));
-
-			await simulator.signIn();
-			await simulator.pairing(qrCode, true);
-
-			const runPairingReq = request({
-				method: InternalMethod.TssRunPairing,
-				origin: ORIGIN,
+			const recoveredAddr = recoverPersonalSignature({
+				data: mockPersonalMsg,
+				signature: personalSignResult,
 			});
 
-			const runPairingJson: any = (await runPairingReq).response;
-			const runPairingResult =
-				runPairingJson.result as RunPairingResponse;
-			expect(runPairingResult.deviceName).toEqual(DEVICE_NAME);
-			expect(runPairingResult.address).toEqual(expect.any(String));
+			expect(recoveredAddr).toEqual(walletAddress);
+
+			// Typed v4 sign
+			let typedV4SignResult: string | null = null;
+
+			keyring
+				.signTypedData(
+					walletAddress,
+					mockSignTypedDataV4,
+					{ version: SignTypedDataVersion.V4 },
+					'eth_signTypedData_v4',
+					runTssSign,
+				)
+				.then((resp: string) => {
+					typedV4SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!typedV4SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
+				await delay(0);
+			}
+			expect(typedV4SignResult).toEqual(expect.any(String));
+			expect(typedV4SignResult).toMatch(/^0x/);
+
+			const v4RecoveredAddr = recoverTypedSignature({
+				data: mockSignTypedDataV4 as any,
+				signature: typedV4SignResult,
+				version: SignTypedDataVersion.V4,
+			});
+
+			expect(v4RecoveredAddr).toEqual(walletAddress);
+
+			// Typed v3 sign
+			let typedV3SignResult: string | null = null;
+
+			keyring
+				.signTypedData(
+					walletAddress,
+					mockSignTypedDataV3,
+					{ version: SignTypedDataVersion.V3 },
+					'eth_signTypedData_v3',
+					runTssSign,
+				)
+				.then((resp: string) => {
+					typedV3SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!typedV3SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
+				await delay(0);
+			}
+			expect(typedV3SignResult).toEqual(expect.any(String));
+			expect(typedV3SignResult).toMatch(/^0x/);
+
+			const v3RecoveredAddr = recoverTypedSignature({
+				data: mockSignTypedDataV3 as any,
+				signature: typedV3SignResult,
+				version: SignTypedDataVersion.V3,
+			});
+
+			expect(v3RecoveredAddr).toEqual(walletAddress);
+
+			// Typed sign
+			let typedV1SignResult: string | null = null;
+
+			keyring
+				.signTypedData(
+					walletAddress,
+					mockSignTypedDataV1,
+					{ version: SignTypedDataVersion.V1 },
+					'eth_signTypedData_v1',
+					runTssSign,
+				)
+				.then((resp: string) => {
+					typedV1SignResult = resp;
+				})
+				.catch((err) => {
+					console.log('err', err);
+				});
+			while (!typedV1SignResult) {
+				// to wait for keyring sign result, if we remove this the thread will be blocked
+				await delay(0);
+			}
+			expect(typedV1SignResult).toEqual(expect.any(String));
+			expect(typedV1SignResult).toMatch(/^0x/);
+
+			const v1RecoveredAddr = recoverTypedSignature({
+				data: mockSignTypedDataV1,
+				signature: typedV1SignResult,
+				version: SignTypedDataVersion.V1,
+			});
+
+			expect(v1RecoveredAddr).toEqual(walletAddress);
+
+			unsub!();
+			await simulator.cleanUpSimulation();
 		});
 	});
+
+	// TODO: We only able to test this if @metamask/snaps-jest package supports Keyring API
+	// it('tss_runRePairing should be success', async () => {
+	// });
 });

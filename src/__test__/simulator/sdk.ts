@@ -15,17 +15,15 @@ import {
 	uint8ArrayToUtf8String,
 } from '../../snap/utils';
 import keccak256 from 'keccak256';
-import {
-	SignTypedDataVersion,
-	TypedDataUtils,
-	typedSignatureHash,
-} from '@metamask/eth-sig-util';
+
 import {
 	BackupConversation,
 	KeygenConversation,
+	Message,
 	SignConversation,
 } from '../../types';
 import { DEVICE_NAME } from '../index.test';
+import { Unsubscribe } from 'firebase/auth';
 
 class sdk2 {
 	private phoneEncPrivateKey?: Uint8Array;
@@ -44,13 +42,7 @@ class sdk2 {
 		delete this.backupData;
 		delete this.uid;
 		delete this.pairingId;
-		if (this.signUnSub) {
-			this.signUnSub();
-			delete this.signUnSub;
-		}
 	};
-
-	private signUnSub?: () => any;
 
 	public setUid(theUid: string | undefined) {
 		this.uid = theUid;
@@ -100,7 +92,7 @@ class sdk2 {
 		}
 	};
 
-	public keygen = async (isApproved = true) => {
+	public keygen = async () => {
 		if (!this.uid) {
 			throw new Error(`Uid missing`);
 		}
@@ -112,10 +104,9 @@ class sdk2 {
 		}
 		let p2: P2KeyGen | null = null;
 		let round = 1;
-		let keygenUnsub: any;
 		await new Promise<void>((resolve) => {
-			keygenUnsub = onSnapshot(
-				doc(db, 'keygen', this.pairingId!),
+			const keygenUnsub = onSnapshot(
+				doc(db, 'keygen', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
 						querySnapshot.data() as KeygenConversation;
@@ -128,13 +119,7 @@ class sdk2 {
 					}
 					if (conversation) {
 						const message = conversation.message;
-						if (!isApproved && this.uid) {
-							await setDoc(doc(db, 'keygen', this.pairingId!), {
-								...conversation,
-								isApproved: false,
-							} as KeygenConversation);
-							resolve();
-						} else if (
+						if (
 							message.party === 1 &&
 							message.message &&
 							message.nonce
@@ -145,16 +130,8 @@ class sdk2 {
 								p2 = new P2KeyGen(sessionId, x2);
 							}
 
-							const decMessage = uint8ArrayToUtf8String(
-								_sodium.crypto_box_open_easy(
-									b64ToUint8Array(message.message),
-									_sodium.from_hex(message.nonce),
-									this.webEncPublicKey,
-									this.phoneEncPrivateKey,
-								),
-							);
-
-							const decodedMessage = b64ToString(decMessage);
+							const decodedMessage =
+								this._decryptMessage(message);
 
 							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
@@ -173,36 +150,39 @@ class sdk2 {
 									),
 								);
 
-								await setDoc(
-									doc(db, 'keygen', this.pairingId!),
-									{
-										...conversation,
-										message: {
-											nonce: _sodium.to_hex(nonce),
-											message: encMessage,
-											party: 2,
-											round,
-										},
-										isApproved: true,
+								await setDoc(doc(db, 'keygen', this.uid!), {
+									...conversation,
+									message: {
+										nonce: _sodium.to_hex(nonce),
+										message: encMessage,
+										party: 2,
+										round,
 									},
-								);
+									isApproved: true,
+								});
 								round++;
 							} else if (msg.p2_key_share) {
 								this.keyshare = msg.p2_key_share;
 								resolve();
+								if (keygenUnsub) {
+									console.log('keygen unsub');
+									keygenUnsub();
+								}
 							}
 						}
 					}
 				},
+				(error) => {
+					console.log('Error getting keygen conversation', error);
+					if (keygenUnsub) {
+						keygenUnsub();
+					}
+				},
 			);
 		});
-		if (keygenUnsub) {
-			console.log("keygen unsub");
-			keygenUnsub();
-		}
 	};
 
-	public sign = async (isApproved = true) => {
+	public sign = async () => {
 		await _sodium.ready;
 		if (!this.uid) {
 			throw new Error(`Uid missing`);
@@ -218,9 +198,9 @@ class sdk2 {
 		}
 		let p2: P2Signature | null = null;
 		let round = 1;
-		await new Promise<string | null>((resolve) => {
-			this.signUnSub = onSnapshot(
-				doc(db, 'sign', this.pairingId!),
+		return await new Promise<Unsubscribe>((resolve) => {
+			const signUnSub = onSnapshot(
+				doc(db, 'sign', this.uid!),
 				async (querySnapshot) => {
 					const conversation =
 						querySnapshot.data() as SignConversation;
@@ -234,61 +214,31 @@ class sdk2 {
 					}
 					if (conversation) {
 						const message = conversation.message;
-						validateMessage(conversation);
-						if (!isApproved) {
-							await setDoc(doc(db, 'sign', this.pairingId!), {
-								...conversation,
-								isApproved: false,
-							});
-						} else if (
+						this._validateMessage(conversation);
+						if (
 							message.party === 1 &&
 							message.message &&
 							message.nonce
 						) {
 							if (p2 === null || p2._state === 0) {
-								let messageHash;
-								if (conversation.hashAlg === 'keccak256')
-									messageHash = keccak256(
-										'0x' + conversation.signMessage,
-									).toString('hex');
-								else if (
-									conversation.hashAlg === 'signTypedDataV1'
-								)
-									messageHash = typedSignatureHash(
-										JSON.parse(conversation.signMessage),
-									);
-								else
-									messageHash = TypedDataUtils.eip712Hash(
-										JSON.parse(conversation.signMessage),
-										SignTypedDataVersion.V4,
-									).toString('hex');
-								if (messageHash.startsWith('0x')) {
-									messageHash = messageHash.slice(2);
-								}
 								round = 1;
+								const messageHash =
+									this._hashSignMsg(conversation);
 								p2 = new P2Signature(
 									conversation.sessionId,
 									fromHexStringToBytes(messageHash),
 									this.keyshare,
 								);
 							}
-							
 
-							const decMessage = uint8ArrayToUtf8String(
-								_sodium.crypto_box_open_easy(
-									b64ToUint8Array(message.message),
-									_sodium.from_hex(message.nonce),
-									this.webEncPublicKey,
-									this.phoneEncPrivateKey,
-								),
-							);
-							const decodedMessage = b64ToString(decMessage);
+							const decodedMessage =
+								this._decryptMessage(message);
 							const msg = await p2.processMessage(decodedMessage);
 							if (msg.msg_to_send) {
 								const nonce = _sodium.randombytes_buf(
 									_sodium.crypto_box_NONCEBYTES,
 								);
-								const encMessage = _sodium.to_base64(
+								const encMessage = Uint8ArrayTob64(
 									_sodium.crypto_box_easy(
 										_sodium.to_base64(
 											msg.msg_to_send,
@@ -299,7 +249,7 @@ class sdk2 {
 										this.phoneEncPrivateKey,
 									),
 								);
-								await setDoc(doc(db, 'sign', this.pairingId!), {
+								await setDoc(doc(db, 'sign', this.uid!), {
 									...conversation,
 									message: {
 										nonce: _sodium.to_hex(nonce),
@@ -310,55 +260,94 @@ class sdk2 {
 									isApproved: true,
 								});
 								round++;
-							} else if (msg.signature) {
-								resolve(msg.signature);
-							} else {
-								resolve(null);
 							}
 						}
 					}
 				},
 				(error) => {
-					if(this.signUnSub) {
-						this.signUnSub();
+					console.log('Error getting sign conversation', error);
+					if (signUnSub) {
+						signUnSub();
 					}
-				}
+				},
 			);
+			resolve(signUnSub);
 		});
 	};
 
 	public backup = () => {
-		let backupUnsub: any;
-		backupUnsub = onSnapshot(
-			doc(db, 'backup', this.pairingId!),
+		const backupUnsub = onSnapshot(
+			doc(db, 'backup', this.uid!),
 			async (querySnapshot) => {
 				const conversation = querySnapshot.data() as BackupConversation;
 				if (conversation?.backupData) {
 					this.backupData = conversation.backupData;
 					if (backupUnsub) {
-						console.log("backup unsub");
+						console.log('backup unsub');
 						backupUnsub();
 					}
 				}
 			},
 		);
 	};
-}
 
-const validateMessage = (conversation: SignConversation) => {
-	const expiry_at = conversation.createdAt + conversation.expiry;
-	const now = Date.now();
-	if (conversation.createdAt > now) {
-		console.error(
-			`Sign message on round ${conversation.message.round} of party ${conversation.message.party} has incorrect creation date`,
+	_hashSignMsg = (conversation: SignConversation) => {
+		let messageHash;
+		switch (conversation.signMetadata) {
+			case 'eth_transaction':
+			case 'legacy_transaction':
+				messageHash = keccak256(
+					'0x' + conversation.signMessage,
+				).toString('hex');
+				break;
+			case 'personal_sign':
+				let messageToSignBytes = Buffer.from(
+					conversation.signMessage,
+					'hex',
+				);
+				let prefix = `\x19Ethereum Signed Message:\n${messageToSignBytes.length}`;
+				let prefixBytes = Buffer.from(prefix, 'utf8');
+				let msg = Buffer.concat([prefixBytes, messageToSignBytes]);
+				messageHash = keccak256(msg).toString('hex');
+				break;
+			default:
+				messageHash = conversation.messageHash;
+		}
+
+		if (messageHash.startsWith('0x')) {
+			messageHash = messageHash.slice(2);
+		}
+		return messageHash;
+	};
+
+	_validateMessage = (conversation: SignConversation) => {
+		const expiry_at = conversation.createdAt + conversation.expiry;
+		const now = Date.now();
+		if (conversation.createdAt > now) {
+			console.error(
+				`Sign message on round ${conversation.message.round} of party ${conversation.message.party} has incorrect creation date`,
+			);
+		}
+		if (expiry_at < now) {
+			console.error(
+				`Sign message on round ${conversation.message.round} of party ${conversation.message.party} expired`,
+			);
+		}
+	};
+
+	_decryptMessage = (message: Message) => {
+		const decMessage = uint8ArrayToUtf8String(
+			_sodium.crypto_box_open_easy(
+				b64ToUint8Array(message.message!),
+				_sodium.from_hex(message.nonce!),
+				this.webEncPublicKey!,
+				this.phoneEncPrivateKey!,
+			),
 		);
-	}
-	if (expiry_at < now) {
-		console.error(
-			`Sign message on round ${conversation.message.round} of party ${conversation.message.party} expired`,
-		);
-	}
-};
+		const decodedMessage = b64ToString(decMessage);
+		return decodedMessage;
+	};
+}
 
 const sdkSingleton = new sdk2();
 

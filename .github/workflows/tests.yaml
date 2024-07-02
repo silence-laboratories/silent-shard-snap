@@ -1,0 +1,24 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+    - staging
+  pull_request:
+    branches:
+    - staging
+
+jobs:
+  test:
+    name: E2e tests
+    runs-on: silent-shard-snap-builder
+    strategy:
+      matrix:
+        node-version: ['18.x']
+
+    steps:
+    - uses: actions/checkout@v4
+    - run: echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
+    - run: echo "APP_ID=${{ secrets.APP_ID }}" >> $GITHUB_ENV
+    - run: npm i
+    - run: npm test

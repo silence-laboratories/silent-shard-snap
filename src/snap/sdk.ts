@@ -193,7 +193,7 @@ async function runSign(
 		message = message.slice(2);
 	}
 	let { pairingData } = await getPairingDataAndStorage();
-	let messageHash = fromHexStringToBytes(messageHashHex);
+	const messageHash = fromHexStringToBytes(messageHashHex);
 	if (messageHash.length !== 32) {
 		throw new SnapError(
 			'Invalid length of messageHash, should be 32 bytes',
