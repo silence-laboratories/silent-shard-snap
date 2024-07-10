@@ -3,8 +3,8 @@
 
 export class SnapError extends Error {
 	code: number;
-	constructor(message: string, code: SnapErrorCode) {
-		super(JSON.stringify({ message, code }));
+	constructor(message: string, code: SnapErrorCode, stack?: string) {
+		super(JSON.stringify({ message, code, stack }));
 		this.name = 'SnapError';
 		this.code = code;
 	}

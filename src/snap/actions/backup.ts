@@ -1,37 +1,45 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import { SnapError, SnapErrorCode } from '../../error';
-import { sendMessage } from '../../firebaseApi';
-import { BackupConversation, PairingData } from '../../types';
+import HttpClient from '../transport/httpClient';
+import { SnapError, SnapErrorCode } from '../error';
+import { PairingData, IBackupAction, BackupConversation } from '../types';
 
-export const backup = async (
-	pairingData: PairingData,
-	encryptedMessage: string,
-	address: string,
-) => {
-	try {
-		const response = await sendMessage(
-			pairingData.token,
-			'backup',
-			{
-				backupData: encryptedMessage,
-				pairingId: pairingData.pairingId,
-				createdAt: Date.now(),
-				address,
-				walletId: 'metamask',
-				expiry: 30000,
-			} as BackupConversation,
-			false,
-		);
-		if (response && !response.isBackedUp) {
-			throw new SnapError('Backup failed', SnapErrorCode.BackupFailed);
-		}
-	} catch (error) {
-		if (error instanceof SnapError) {
-			throw error;
-		} else if (error instanceof Error) {
-			throw new SnapError(error.message, SnapErrorCode.BackupFailed);
-		} else throw new SnapError('unknown-error', SnapErrorCode.UnknownError);
+export class BackupAction implements IBackupAction {
+	#httpClient: HttpClient;
+
+	constructor(httpClient: HttpClient) {
+		this.#httpClient = httpClient;
 	}
-};
+
+	backup = async (
+		pairingData: PairingData,
+		encryptedMessage: string,
+		address: string,
+	) => {
+		try {
+			const response = await this.#httpClient.sendMessage(
+				pairingData.token,
+				'backup',
+				{
+					backupData: encryptedMessage,
+					pairingId: pairingData.pairingId,
+					createdAt: Date.now(),
+					address,
+					walletId: 'metamask',
+					expiry: 30000,
+				} as BackupConversation,
+				false,
+			);
+			if (response && !response.isBackedUp) {
+				throw new SnapError('Backup failed', SnapErrorCode.BackupFailed);
+			}
+		} catch (error) {
+			if (error instanceof SnapError) {
+				throw error;
+			} else if (error instanceof Error) {
+				throw new SnapError(error.message, SnapErrorCode.BackupFailed);
+			} else throw new SnapError('unknown-error', SnapErrorCode.UnknownError);
+		}
+	}
+}
