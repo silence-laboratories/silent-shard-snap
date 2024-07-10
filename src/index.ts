@@ -11,6 +11,7 @@ import SnapSDK from './snap/sdk';
 import { Storage } from './snap/storage';
 import { version as SNAP_VERSION } from './../package.json';
 import { initPairingConfirmation } from './snap/utils/snapUi';
+import * as utils from './snap/utils/utils';
 
 window.Buffer = window.Buffer || Buffer;
 
@@ -162,9 +163,9 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			return {
 				address:
 					'0x' +
-					pubToAddress(
+					utils.toHexString(pubToAddress(
 						Buffer.from(keygenRes.distributedKey.publicKey, 'hex'),
-					).toString('hex'),
+					)),
 			};
 
 		/**

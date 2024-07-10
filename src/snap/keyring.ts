@@ -9,6 +9,10 @@ import {
 	SubmitRequestResponse,
 	emitSnapKeyringEvent,
 } from '@metamask/keyring-api';
+import {
+	stripHexPrefix,
+	hashPersonalMessage,
+} from '@ethereumjs/util';
 import type { Json } from '@metamask/utils';
 import { JsonRpcRequest } from '@metamask/snaps-types';
 import {
@@ -17,12 +21,6 @@ import {
 	typedSignatureHash,
 } from '@metamask/eth-sig-util';
 import { InvalidRequestError } from '@metamask/snaps-sdk';
-import type { SnapsGlobalObject } from '@metamask/snaps-rpc-methods';
-import {
-	stripHexPrefix,
-	hashPersonalMessage,
-	bufArrToArr,
-} from '@ethereumjs/util';
 import { Common, Hardfork } from '@ethereumjs/common';
 import { TransactionFactory } from '@ethereumjs/tx';
 import { RLP } from '@ethereumjs/rlp';
@@ -306,14 +304,13 @@ export default class AccountManagement implements Keyring {
 		const tx1 = TransactionFactory.fromTxData(tx, {
 			common,
 		});
-		const msg = tx1.getMessageToSign(false);
+		const msg = tx1.getMessageToSign();
 		// If tx1.type = 1, then it is a legacy txn, and we have to do RLP encoding manually, following code do this.
 		const serializedMessage =
 			tx1.type == 0
-				? Buffer.from(RLP.encode(bufArrToArr(msg))).toString('hex')
-				: msg.toString('hex');
-		const hashedMsg = tx1.getMessageToSign(true).toString('hex');
-
+				? Buffer.from(RLP.encode(msg)).toString('hex')
+				: toHexString(msg as Uint8Array);
+		const hashedMsg = toHexString(tx1.getHashedMessageToSign());
 		const wallet = this.#getWalletByAddress(from);
 
 		const transactionMetadata: SignMetadata =
@@ -418,6 +415,6 @@ export default class AccountManagement implements Keyring {
 		event: KeyringEvent,
 		data: Record<string, Json>,
 	): Promise<void> {
-		await emitSnapKeyringEvent(snap as SnapsGlobalObject, event, data);
+		await emitSnapKeyringEvent(snap as any, event, data);
 	}
 }
