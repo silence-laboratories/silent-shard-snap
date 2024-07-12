@@ -196,9 +196,8 @@ export class PairingAction {
 
 	refreshToken = async (pairingData: PairingData) => {
 		try {
-			let startTime = Date.now();
-			let signature: Uint8Array;
-			signature = _sodium.crypto_sign_detached(
+			const startTime = Date.now();
+			const signature = _sodium.crypto_sign_detached(
 				pairingData.token,
 				_sodium.from_hex(pairingData.webSignPrivateKey),
 			);

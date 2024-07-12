@@ -9,45 +9,32 @@ const STORAGE_KEY = 'SilentShare1';
 
 
 export class Storage implements IStorage {
-  private static _instance: Storage | null = null;
-  private VERSION = 1;
+  static #instance: Storage | null = null;
+  #VERSION = 1;
+  #dataUpToDate = false;
+  #storageData: StorageData | null = null;
 
   static instance = async () => {
-    if (Storage._instance == null) {
-      Storage._instance = new Storage();
-      await Storage._instance.migrate();
+    if (Storage.#instance == null) {
+      Storage.#instance = new Storage();
+      await Storage.#instance.migrate();
     }
-    return Storage._instance;
+    return Storage.#instance;
   }
-
-  /**
-   * Check if a storage exist for the wallet
-   *
-   * @returns true if exists, false otherwise
-   */
-  isStorageExist = async (): Promise<boolean> => {
-    try {
-      let data = await snap.request({
-        method: 'snap_manageState',
-        params: { operation: 'get' },
-      });
-      return data !== null;
-    } catch (error) {
-      throw error instanceof Error
-        ? new SnapError(error.message, SnapErrorCode.StorageError)
-        : new SnapError(`unknown-error`, SnapErrorCode.UnknownError, 'isStorageExist in storage');
-    }
-  };
 
   /**
    * Delete the stored data, if it exists.
    */
   clearStorageData = async () => {
     try {
+      this.#storageData = null;
+      this.#dataUpToDate = true;
+
       await snap.request({
         method: 'snap_manageState',
         params: { operation: 'clear' },
       });
+
     } catch (error) {
       throw error instanceof Error
         ? new SnapError(error.message, SnapErrorCode.StorageError)
@@ -69,15 +56,16 @@ export class Storage implements IStorage {
         );
       }
 
-      let state: {
-        SilentShare1?: string;
-      } = {};
-      state[STORAGE_KEY] = JSON.stringify({ ...data, version: this.VERSION });
-
+      const state = {
+        [STORAGE_KEY]: JSON.stringify({ ...data, version: this.#VERSION })
+      };
       await snap.request({
         method: 'snap_manageState',
         params: { operation: 'update', newState: state },
-      }); return;
+      });
+      this.#storageData = { ...data, version: this.#VERSION };
+      this.#dataUpToDate = true;
+      return;
     } catch (error) {
       throw error instanceof Error
         ? new SnapError(error.message, SnapErrorCode.StorageError)
@@ -92,28 +80,26 @@ export class Storage implements IStorage {
    */
   getStorageData = async (): Promise<StorageData> => {
     try {
-      const _isStorageExist = await this.isStorageExist();
-      if (!_isStorageExist) {
-        throw new SnapError('Snap is not paired', SnapErrorCode.NotPaired);
+      if (this.#storageData &&
+        this.#dataUpToDate) {
+        return this.#storageData;
       }
 
-      let state = await snap.request({
+      const state = await snap.request({
         method: 'snap_manageState',
         params: { operation: 'get' },
       });
 
       if (!state) {
-        throw new SnapError(
-          'Snap failed to fetch state',
-          SnapErrorCode.UnknownError,
-        );
+        throw new SnapError('Snap is not paired', SnapErrorCode.NotPaired);
       }
 
       const jsonObject: StorageData = JSON.parse(
         state[STORAGE_KEY] as string,
       );
 
-      console.log('Storage data', JSON.stringify(jsonObject));
+      this.#storageData = jsonObject;
+      this.#dataUpToDate = true;
 
       return jsonObject;
     } catch (error) {
@@ -125,20 +111,16 @@ export class Storage implements IStorage {
 
 
   private migrate = async () => {
-    if (!this.isStorageExist()) {
-      return;
-    }
-
     try {
       const storageData = await this.getStorageData();
 
-      const migration = new Migration(storageData, this.VERSION);
+      const migration = new Migration(storageData, this.#VERSION);
 
       const newStorageData = migration.getStorageData();
 
       await this.setStorageData(newStorageData);
     } catch (e) {
-      // Migration failed. Do not save the new storage data;
+      // Migration failed. 
     }
   };
 }

@@ -31,7 +31,6 @@ export default class SnapSDK implements ISnapSDK {
   static #instance: SnapSDK | null = null;
 
   constructor(storage: IStorage) {
-    console.log('baseUrl : ', baseUrl);
     this.#storage = storage;
     this.#httpClient = new HttpClient(baseUrl);
     this.#pairingAction = new PairingAction(this.#httpClient);
@@ -51,7 +50,7 @@ export default class SnapSDK implements ISnapSDK {
 
   isPaired = async () => {
     try {
-      let silentShareStorage = await this.#storage.getStorageData();
+      const silentShareStorage = await this.#storage.getStorageData();
       const deviceName = silentShareStorage.pairingData.deviceName;
       return {
         isPaired: true,
@@ -76,12 +75,12 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   initPairing = async () => {
-    let qrCode = await this.#pairingAction.init();
+    const qrCode = await this.#pairingAction.init();
     return qrCode;
   }
 
   runPairing = async () => {
-    let result = await this.#pairingAction.getPairingSessionData();
+    const result = await this.#pairingAction.getPairingSessionData();
     await this.#storage.setStorageData({
       newPairingState: result.newPairingState,
       pairingData: result.newPairingState.pairingData,
@@ -100,7 +99,7 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   runRePairing = async () => {
-    let silentShareStorage: StorageData = await this.#storage.getStorageData();
+    const silentShareStorage: StorageData = await this.#storage.getStorageData();
     const wallets = Object.values(silentShareStorage.wallets);
     const currentAccount = wallets.length > 0 ? wallets[0] : null;
     if (!currentAccount) {
@@ -110,7 +109,7 @@ export default class SnapSDK implements ISnapSDK {
       currentAccount?.distributedKey,
     );
 
-    let result = await this.#pairingAction.getPairingSessionData(
+    const result = await this.#pairingAction.getPairingSessionData(
       currentAccountAddress,
     );
 
@@ -143,9 +142,9 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   refreshPairing = async () => {
-    let silentShareStorage: StorageData = await this.#storage.getStorageData();
-    let pairingData = silentShareStorage.pairingData;
-    let result = await this.#pairingAction.refreshToken(pairingData);
+    const silentShareStorage: StorageData = await this.#storage.getStorageData();
+    const pairingData = silentShareStorage.pairingData;
+    const result = await this.#pairingAction.refreshToken(pairingData);
     await this.#storage.setStorageData({
       ...silentShareStorage,
       pairingData: result.newPairingData,
@@ -154,7 +153,7 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   #getPairingDataAndStorage = async () => {
-    let silentShareStorage: StorageData = await this.#storage.getStorageData();
+    const silentShareStorage: StorageData = await this.#storage.getStorageData();
     let pairingData = silentShareStorage.pairingData;
     if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
       pairingData = await this.refreshPairing();
@@ -163,11 +162,11 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   runKeygen = async () => {
-    let { pairingData, silentShareStorage } = await this.#getPairingDataAndStorage();
-    let wallets = silentShareStorage.wallets;
-    let accountId = Object.keys(wallets).length + 1;
-    let x1 = fromHexStringToBytes(await Entropy.requestEntropy());
-    let result = await this.#keygenAction.keygen(pairingData, accountId, x1);
+    const { pairingData, silentShareStorage } = await this.#getPairingDataAndStorage();
+    const wallets = silentShareStorage.wallets;
+    const accountId = Object.keys(wallets).length + 1;
+    const x1 = fromHexStringToBytes(await Entropy.requestEntropy());
+    const result = await this.#keygenAction.keygen(pairingData, accountId, x1);
     await this.#storage.setStorageData({
       ...silentShareStorage,
       newPairingState: {
@@ -191,7 +190,7 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   runBackup = async () => {
-    let { pairingData, silentShareStorage } = await this.#getPairingDataAndStorage();
+    const { pairingData, silentShareStorage } = await this.#getPairingDataAndStorage();
     if (silentShareStorage.newPairingState?.distributedKey) {
       const encryptedMessage = await Entropy.encMessage(
         JSON.stringify(silentShareStorage.newPairingState.distributedKey),
@@ -224,7 +223,7 @@ export default class SnapSDK implements ISnapSDK {
     if (message.startsWith('0x')) {
       message = message.slice(2);
     }
-    let { pairingData } = await this.#getPairingDataAndStorage();
+    const { pairingData } = await this.#getPairingDataAndStorage();
     const messageHash = fromHexStringToBytes(messageHashHex);
     if (messageHash.length !== 32) {
       throw new SnapError(
@@ -245,7 +244,7 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   setSnapVersion = async (snapVersion: string) => {
-    let { pairingData } = await this.#getPairingDataAndStorage();
+    const { pairingData } = await this.#getPairingDataAndStorage();
     await this.#userAction.setSnapVersion(pairingData.token, snapVersion);
   }
 

@@ -4,23 +4,23 @@
 import { IMigration, StorageData, V0StorageData, V1StorageData } from "./types"
 
 export class Migration implements IMigration {
-  private storageData: StorageData;
-  private latestVersion;
+  #storageData: StorageData;
+  #latestVersion: number;
 
   constructor(storageData: StorageData, version: number) {
-    this.storageData = storageData;
-    this.latestVersion = 2;
+    this.#storageData = storageData;
+    this.#latestVersion = version;
   };
 
-  private getV1StorageData = (): V1StorageData => {
-    return this.storageData as V1StorageData;
+  #getV1StorageData = (): V1StorageData => {
+    return this.#storageData as V1StorageData;
   }
 
-  private migrateV0toV1 = (data: V0StorageData): V1StorageData => {
+  #migrateV0toV1 = (data: V0StorageData): V1StorageData => {
     return { ...data, version: 1 };
   }
 
-  private getVersion = () => {
+  #getVersion = () => {
     try {
       //@ts-ignore
       return this.data.version as number;
@@ -28,26 +28,20 @@ export class Migration implements IMigration {
     catch (e) { return 0; }
   }
 
-  private migrate = () => {
-    const migrationMap = {
-      'V0toV1': this.migrateV0toV1,
-      // Next few elements in migrationMap will look like.
-      // 'V1toV2': this.migrateV1toV2,
-      // 'V2toV3' : this.migrateV2toV3,
-    }
-    let version = this.getVersion()
+  #migrate = () => {
+    const currentVersion = this.#getVersion()
 
-    if (version === this.latestVersion) throw new Error('Migration failed, already up to date');
+    if (currentVersion === this.#latestVersion) return;
 
-
-    for (; version < this.latestVersion; version++) {
-      let v = `V${version}toV${version + 1}` as keyof typeof migrationMap;
-      this.storageData = migrationMap[v]!(this.storageData);
+    switch (currentVersion) {
+      case 0: this.#migrateV0toV1;
+      // case 1 : this.migrateV1toV2;
+      // case 2 : this.migrateV2toV3;
     }
   }
 
   public getStorageData = () => {
-    this.migrate();
-    return this.getV1StorageData();
+    this.#migrate();
+    return this.#getV1StorageData();
   }
 }

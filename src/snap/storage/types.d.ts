@@ -4,7 +4,6 @@
 import { KeyringAccount, KeyringRequest } from '@metamask/keyring-api';
 
 export interface IStorage {
-  isStorageExist: () => Promise<boolean>;
   clearStorageData: () => Promise<void>;
   setStorageData: (data: Omit<StorageData, 'version'>) => Promise<void>;
   getStorageData: () => Promise<StorageData>;
@@ -58,5 +57,5 @@ export type V1StorageData = KeyringState & V1SnapState
 export type StorageData = V1StorageData;
 
 export interface IMigration {
-  public getStorageData: () => V1StorageData;
+  public getStorageData: () => StorageData;
 }

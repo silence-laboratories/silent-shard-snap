@@ -1,6 +1,6 @@
 {
   "name": "@silencelaboratories/silent-shard-snap-staging",
-  "version": "1.2.10-alpha.1",
+  "version": "1.2.10-alpha.2",
   "author": "Silence Laboratories",
   "license": "SEE LICENSE IN LICENSE.md",
   "description": "Distributed wallet between Metamask plugin and SilentShard mobile app",
@@ -67,7 +67,7 @@
     "@metamask/snaps-jest": "^8.2.0",
     "@types/jest": "^29.5.12",
     "@types/libsodium-wrappers": "^0.7.14",
-    "@types/node": "^20.6.2",
+    "@types/node": "^20.14.10",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^5.33.0",
     "@typescript-eslint/parser": "^5.33.0",

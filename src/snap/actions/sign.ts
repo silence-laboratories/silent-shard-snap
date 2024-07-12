@@ -37,12 +37,11 @@ export class SignAction implements ISignAction {
 				);
 			}
 			this.#running = true;
-			let startTime = Date.now();
+			const startTime = Date.now();
 			const sessionId = _sodium.to_hex(await randBytes(32));
+			const p1 = new P1Signature(sessionId, messageHash, keyShare);
 
-			let p1KeyShareObj = keyShare;
 			let round = 1;
-			const p1 = new P1Signature(sessionId, messageHash, p1KeyShareObj);
 			let signConversation: SignConversation = {
 				signMetadata,
 				accountId,

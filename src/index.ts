@@ -80,7 +80,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			const isRePair = (request.params as [{ isRePair: boolean }])[0]
 				.isRePair;
 			if (!isRePair) {
-				let initPairingRequest = await initPairingConfirmation();
+				const initPairingRequest = await initPairingConfirmation();
 
 				if (!initPairingRequest) {
 					throw new SnapError(
@@ -206,7 +206,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			if (process.env.IS_PRODUCTION) {
 				return null;
 			}
-			let silentShareStorage = await storage.getStorageData();
+			const silentShareStorage = await storage.getStorageData();
 			return {
 				distributedKey:
 					silentShareStorage.newPairingState?.distributedKey,

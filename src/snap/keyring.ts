@@ -56,7 +56,7 @@ export default class AccountManagement implements Keyring {
 	async createAccount(
 		options: Record<string, Json> = {},
 	): Promise<KeyringAccount> {
-		let silentShareStorage: StorageData = await this.#storage.getStorageData();
+		const silentShareStorage: StorageData = await this.#storage.getStorageData();
 		const newPairingState = silentShareStorage.newPairingState;
 		if (!newPairingState?.distributedKey || !newPairingState.accountId) {
 			throw new SnapError(
@@ -65,11 +65,10 @@ export default class AccountManagement implements Keyring {
 			);
 		}
 
-		let distributedKey: DistributedKey = newPairingState.distributedKey;
-		let account: KeyringAccount;
+		const distributedKey: DistributedKey = newPairingState.distributedKey;
 		const address = getAddressFromDistributedKey(distributedKey);
 
-		account = {
+		const account: KeyringAccount = {
 			id: newPairingState.accountId,
 			options,
 			address,
@@ -149,7 +148,7 @@ export default class AccountManagement implements Keyring {
 	}
 
 	async deleteAccount(id: string): Promise<void> {
-		let silentShareStorage: StorageData = await this.#storage.getStorageData();
+		const silentShareStorage: StorageData = await this.#storage.getStorageData();
 		await this.#emitEvent(KeyringEvent.AccountDeleted, { id });
 		delete this.#wallets[id];
 		if (
@@ -404,7 +403,7 @@ export default class AccountManagement implements Keyring {
 	}
 
 	async #saveState(): Promise<void> {
-		let silentShareStorage: StorageData = await this.#storage.getStorageData();
+		const silentShareStorage: StorageData = await this.#storage.getStorageData();
 		await this.#storage.setStorageData({
 			...silentShareStorage,
 			wallets: this.#wallets,
