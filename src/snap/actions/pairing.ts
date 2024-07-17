@@ -2,11 +2,11 @@
 // This software is licensed under the Silence Laboratories License Agreement.
 
 import * as utils from '../utils/utils';
+import * as Entropy from '../entropy';
 import { v4 as uuid } from 'uuid';
 import _sodium from 'libsodium-wrappers';
 import HttpClient from '../transport/httpClient';
 import { SnapError, SnapErrorCode } from '../error';
-import Entropy from '../entropy';
 import { PairingDataInit, DistributedKey, PairingData } from '../types';
 
 export enum PairingRemark {

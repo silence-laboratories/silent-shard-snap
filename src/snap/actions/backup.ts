@@ -3,9 +3,9 @@
 
 import HttpClient from '../transport/httpClient';
 import { SnapError, SnapErrorCode } from '../error';
-import { PairingData, IBackupAction, BackupConversation } from '../types';
+import { PairingData, BackupConversation } from '../types';
 
-export class BackupAction implements IBackupAction {
+export class BackupAction {
 	#httpClient: HttpClient;
 
 	constructor(httpClient: HttpClient) {

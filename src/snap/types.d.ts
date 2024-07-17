@@ -4,4 +4,3 @@
 export * from './actions/types';
 export * from './storage/types'
 export { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
-export * from './sdk/types';

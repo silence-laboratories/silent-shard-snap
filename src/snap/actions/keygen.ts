@@ -10,9 +10,9 @@ import _sodium, { base64_variants } from 'libsodium-wrappers';
 import HttpClient from '../transport/httpClient';
 import * as utils from '../utils/utils';
 import { SnapError, SnapErrorCode } from '../error';
-import { IKeygenAction, KeygenResult, KeygenConversation, PairingData } from '../types';
+import { KeygenResult, KeygenConversation, PairingData } from '../types';
 
-export class KeygenAction implements IKeygenAction {
+export class KeygenAction {
 	#running: boolean = false;
 	#httpClient: HttpClient;
 

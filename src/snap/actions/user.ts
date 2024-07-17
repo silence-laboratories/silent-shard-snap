@@ -3,9 +3,8 @@
 
 import HttpClient from '../transport/httpClient';
 import { SnapError, SnapErrorCode } from '../error';
-import { IUserAction } from './types';
 
-export class UserAction implements IUserAction {
+export class UserAction {
 	#httpClient: HttpClient;
 
 	constructor(httpClient: HttpClient) {

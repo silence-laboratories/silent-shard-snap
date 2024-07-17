@@ -29,15 +29,13 @@ const hasPermission = (origin: string, method: string): boolean => {
 
 const getKeyring = async (): Promise<AccountManagement> => {
 	if (!keyring) {
-		if (!keyring) {
-			const storage = await Storage.instance();
-			const sdk = await SnapSDK.instance();
-			try {
-				const keyringState = await storage.getStorageData();
-				keyring = new AccountManagement(keyringState, storage, sdk);
-			} catch {
-				keyring = new AccountManagement({ wallets: {}, requests: {} }, storage, sdk);
-			}
+		const storage = await Storage.instance();
+		const sdk = await SnapSDK.instance();
+		try {
+			const keyringState = await storage.getStorageData();
+			keyring = new AccountManagement(keyringState, storage, sdk);
+		} catch {
+			keyring = new AccountManagement({ wallets: {}, requests: {} }, storage, sdk);
 		}
 	}
 	return keyring;

@@ -10,9 +10,9 @@ import _sodium, { base64_variants } from 'libsodium-wrappers';
 import HttpClient from '../transport/httpClient';
 import * as utils from '../utils/utils';
 import { SnapError, SnapErrorCode } from '../error';
-import { ISignAction, SignResult, SignConversation, SignMetadata, PairingData } from '../types';
+import { SignResult, SignConversation, SignMetadata, PairingData } from '../types';
 
-export class SignAction implements ISignAction {
+export class SignAction {
 	#running: boolean = false;
 	#httpClient: HttpClient;
 

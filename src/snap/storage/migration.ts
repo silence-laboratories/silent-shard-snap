@@ -1,9 +1,9 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import { IMigration, StorageData, V0StorageData, V1StorageData } from "./types"
+import { StorageData, V0StorageData, V1StorageData } from "./types"
 
-export class Migration implements IMigration {
+export class Migration {
   #storageData: StorageData;
   #latestVersion: number;
 

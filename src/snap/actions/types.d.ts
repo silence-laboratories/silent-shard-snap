@@ -7,23 +7,6 @@ export interface PairingDataInit {
   signPair: _sodium.KeyPair;
 }
 
-export interface IPairingAction {
-  init: () => Promise<string>,
-  getPairingSessionData: (currentAccountAddress?: string) => Promise<{
-    newPairingState: {
-      pairingData: PairingData;
-      distributedKey: DistributedKey | null;
-      accountId: string | null;
-    };
-    elapsedTime: number;
-    deviceName: string;
-  }>,
-  refreshToken: (pairingData: PairingData) => Promise<{
-    newPairingData: PairingData;
-    elapsedTime: number;
-  }>,
-}
-
 export interface Message {
   message?: string;
   nonce?: string;
@@ -46,10 +29,6 @@ export type KeygenResult = {
   keyShareData: IP1KeyShare;
   elapsedTime: number;
 };
-
-export interface IKeygenAction {
-  keygen: (pairingData: PairingData, accountIdNumber: number, x1: Uint8Array) => Promise<KeygenResult>
-}
 
 export type SignMetadata =
   | 'legacy_transaction'
@@ -83,10 +62,6 @@ export type SignResult = {
   elapsedTime: number;
 }
 
-export interface ISignAction {
-  sign: (pairingData: PairingData, keyShare: IP1KeyShare, hashAlg: string, message: string, messageHash: Uint8Array, signMetadata: SignMetadata, accountId: number) => Promise<SignResult>,
-}
-
 export interface BackupConversation {
   createdAt: number;
   expiry: number;
@@ -95,12 +70,4 @@ export interface BackupConversation {
   pairingId: string;
   address: string;
   walletId: string;
-}
-
-export interface IBackupAction {
-  backup: (pairingData: PairingData, encryptedMessage: string, address: string) => Promise<void>
-}
-
-export interface IUserAction {
-  setSnapVersion: (token: string, snapVersion: string) => Promise<void>
 }

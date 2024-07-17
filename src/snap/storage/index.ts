@@ -10,7 +10,7 @@ const STORAGE_KEY = 'SilentShare1';
 
 export class Storage implements IStorage {
   static #instance: Storage | null = null;
-  #VERSION = 1;
+  readonly #VERSION = 1;
   #dataUpToDate = false;
   #storageData: StorageData | null = null;
 

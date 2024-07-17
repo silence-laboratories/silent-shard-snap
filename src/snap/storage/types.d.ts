@@ -55,7 +55,3 @@ export interface V1SnapState extends V0SnapState {
 export type V1StorageData = KeyringState & V1SnapState
 
 export type StorageData = V1StorageData;
-
-export interface IMigration {
-  public getStorageData: () => StorageData;
-}

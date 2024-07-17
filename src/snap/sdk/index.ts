@@ -1,7 +1,7 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import Entropy from '../entropy';
+import * as Entropy from '../entropy';
 import HttpClient from '../transport/httpClient';
 import { fromHexStringToBytes, getAddressFromDistributedKey } from '../utils/utils';
 import { SnapError, SnapErrorCode } from '../error';
@@ -12,7 +12,6 @@ import { SignAction } from '../actions/sign';
 import { PairingAction } from '../actions/pairing';
 import { UserAction } from '../actions/user';
 import { Storage } from '../storage';
-import { ISnapSDK } from './types';
 import { SignMetadata, IStorage, StorageData, IP1KeyShare } from '../types';
 
 const TOKEN_LIFE_TIME = 60000;
@@ -20,7 +19,7 @@ const baseUrl = process.env.IS_PRODUCTION
   ? 'https://us-central1-mobile-wallet-mm-snap.cloudfunctions.net'
   : 'https://us-central1-mobile-wallet-mm-snap-staging.cloudfunctions.net';
 
-export default class SnapSDK implements ISnapSDK {
+export default class SnapSDK {
   #storage: IStorage;
   #httpClient: HttpClient;
   #pairingAction: PairingAction;
@@ -41,7 +40,7 @@ export default class SnapSDK implements ISnapSDK {
   }
 
   static instance = async () => {
-    if (SnapSDK.#instance == null) {
+    if (SnapSDK.#instance === null) {
       const storageInstance = await Storage.instance();
       SnapSDK.#instance = new SnapSDK(storageInstance);
     }
