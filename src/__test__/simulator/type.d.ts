@@ -13,6 +13,12 @@ interface RunPairingResponse {
 	deviceName: string;
 }
 
+interface RunRePairingResponse {
+	currentAccountAddress: string,
+	newAccountAddress: string,
+	deviceName: string,
+}
+
 interface RunKeygenResponse {
 	address: string;
 }
@@ -23,10 +29,16 @@ interface SnapVersionResponse {
 }
 
 type RunSign = (
-    hashAlg: string,
-    message: string,
-    messageHashHex: string,
-    signMetadata: SignMetadata,
-    accountId: number,
-    keyShare: IP1KeyShare,
-) => Promise<any>; 
+	hashAlg: string,
+	message: string,
+	messageHashHex: string,
+	signMetadata: SignMetadata,
+	accountId: number,
+	keyShare: IP1KeyShare,
+) => Promise<any>;
+
+interface QrCode {
+	pairingId: string;
+	webEncPublicKey: string;
+	signPublicKey: string;
+}

@@ -39,10 +39,12 @@ export default class SnapSDK {
     this.#userAction = new UserAction(this.#httpClient);
   }
 
-  static instance = async () => {
+  static instance = async (storage?: IStorage) => {
     if (SnapSDK.#instance === null) {
-      const storageInstance = await Storage.instance();
+      const storageInstance = storage ?? await Storage.instance();
       SnapSDK.#instance = new SnapSDK(storageInstance);
+    } else if (storage) {
+      SnapSDK.#instance.#storage = storage;
     }
     return SnapSDK.#instance;
   }
@@ -99,13 +101,13 @@ export default class SnapSDK {
 
   runRePairing = async () => {
     const silentShareStorage: StorageData = await this.#storage.getStorageData();
-    const wallets = Object.values(silentShareStorage.wallets);
-    const currentAccount = wallets.length > 0 ? wallets[0] : null;
-    if (!currentAccount) {
+
+    const currentDistributedKey = silentShareStorage.newPairingState?.distributedKey;
+    if (!currentDistributedKey) {
       throw new SnapError('Not Paired', SnapErrorCode.NotPaired);
     }
     const currentAccountAddress = getAddressFromDistributedKey(
-      currentAccount?.distributedKey,
+      currentDistributedKey,
     );
 
     const result = await this.#pairingAction.getPairingSessionData(
@@ -249,5 +251,9 @@ export default class SnapSDK {
 
   getSnapVersion = async () => {
     return await this.#httpClient.snapVersion();
+  }
+
+  getStorageData = async () => {
+    return await this.#storage.getStorageData();
   }
 }

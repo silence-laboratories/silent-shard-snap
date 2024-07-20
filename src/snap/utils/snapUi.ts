@@ -1,7 +1,7 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import { panel, text, heading, divider } from '@metamask/snaps-sdk';
+import { panel, text, heading, divider } from '@metamask/snaps-ui';
 import { DialogType } from '@metamask/snaps-types';
 
 const showConfirmationMessage = async (

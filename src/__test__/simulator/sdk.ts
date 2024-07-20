@@ -1,91 +1,67 @@
-import { b64ToString } from './../../snap/utils';
 import {
 	IP2KeyShare,
 	P2KeyGen,
 	P2Signature,
 	randBytes,
 } from '@silencelaboratories/ecdsa-tss';
+import * as utils from './../../snap/utils/utils';
 import _sodium, { base64_variants } from 'libsodium-wrappers';
-import { onSnapshot, setDoc, doc } from 'firebase/firestore';
-import { db } from './firebase';
-import {
-	Uint8ArrayTob64,
-	b64ToUint8Array,
-	fromHexStringToBytes,
-	uint8ArrayToUtf8String,
-} from '../../snap/utils';
+import { onSnapshot, setDoc, doc, Firestore } from 'firebase/firestore';
 import keccak256 from 'keccak256';
-
 import {
 	BackupConversation,
 	KeygenConversation,
 	Message,
 	SignConversation,
-} from '../../types';
-import { DEVICE_NAME } from '../index.test';
+} from '../../snap/types';
 import { Unsubscribe } from 'firebase/auth';
+import { DEVICE_NAME } from '../constants';
 
-class sdk2 {
-	private phoneEncPrivateKey?: Uint8Array;
-	private phoneEncPublicKey?: Uint8Array;
-	private webEncPublicKey?: Uint8Array;
-	private keyshare?: IP2KeyShare;
-	private backupData?: string;
-	private uid?: string | undefined;
-	private pairingId?: string | undefined;
+enum Collection {
+	pairing = 'pairing',
+	keygen = 'keygen',
+	sign = 'sign',
+	backup = 'backup'
+}
 
-	public cleanState = () => {
-		delete this.phoneEncPrivateKey;
-		delete this.phoneEncPublicKey;
-		delete this.webEncPublicKey;
-		delete this.keyshare;
-		delete this.backupData;
-		delete this.uid;
-		delete this.pairingId;
-	};
+export class SimulatorSdk {
+	#db: Firestore;
+	#uid: string;
+	#phoneEncPrivateKey: Uint8Array;
+	#phoneEncPublicKey: Uint8Array;
+	#webEncPublicKey?: Uint8Array;
+	#keyshare?: IP2KeyShare;
+	#backupData?: string;
 
-	public setUid(theUid: string | undefined) {
-		this.uid = theUid;
+	constructor(uid: string, db: Firestore) {
+		this.#uid = uid;
+		this.#db = db;
+		const encPair = _sodium.crypto_box_keypair();
+		this.#phoneEncPrivateKey = encPair.privateKey;
+		this.#phoneEncPublicKey = encPair.publicKey;
 	}
 
-	public getUid(): string | undefined {
-		return this.uid;
+	static init = async () => {
+		await _sodium.ready;
 	}
 
-	public isPaired = () => {
-		return true;
-	};
-
-	public isKeyshareExist = () => {
-		if (this.keyshare) return true;
-		return false;
-	};
-
-	public sendPairing = async (qrCode: string, isRepair = false) => {
+	public pairing = async (qrCode: QrCode, isRepair = false) => {
 		try {
-			const encPair = _sodium.crypto_box_keypair();
-			this.phoneEncPrivateKey = encPair.privateKey;
-			this.phoneEncPublicKey = encPair.publicKey;
-			const {
-				pairingId,
-				signPublicKey,
-				webEncPublicKey,
-			}: {
-				pairingId: string;
-				signPublicKey: string;
-				webEncPublicKey: string;
-			} = JSON.parse(qrCode);
+			if (isRepair && this.#backupData == null) {
+				throw new Error('Not backup data found');
+			}
 
-			this.webEncPublicKey = _sodium.from_hex(webEncPublicKey);
-			this.pairingId = pairingId;
-			await setDoc(doc(db, 'pairing', pairingId), {
-				userId: this.uid,
-				signPublicKey: signPublicKey,
-				phoneEncPublicKey: _sodium.to_hex(this.phoneEncPublicKey),
+			const { pairingId, signPublicKey, webEncPublicKey } = qrCode;
+			this.#webEncPublicKey = _sodium.from_hex(webEncPublicKey);
+
+			await setDoc(doc(this.#db, Collection.pairing, pairingId), {
+				userId: this.#uid,
+				signPublicKey,
+				phoneEncPublicKey: _sodium.to_hex(this.#phoneEncPublicKey),
 				deviceName: DEVICE_NAME,
 				createdat: Date.now(),
 				expiry: 30000,
-				backupData: isRepair ? this.backupData ?? null : null,
+				backupData: isRepair ? this.#backupData : null,
 			});
 		} catch (error) {
 			throw error;
@@ -93,32 +69,19 @@ class sdk2 {
 	};
 
 	public keygen = async () => {
-		if (!this.uid) {
-			throw new Error(`Uid missing`);
-		}
-		if (!this.webEncPublicKey) {
-			throw new Error(`webEncPublicKey missing`);
-		}
-		if (!this.phoneEncPrivateKey) {
-			throw new Error(`phoneEncPrivateKey missing`);
-		}
 		let p2: P2KeyGen | null = null;
 		let round = 1;
 		await new Promise<void>((resolve) => {
 			const keygenUnsub = onSnapshot(
-				doc(db, 'keygen', this.uid!),
+				doc(this.#db, Collection.keygen, this.#uid),
 				async (querySnapshot) => {
-					const conversation =
-						querySnapshot.data() as KeygenConversation;
-					if (
-						!this.uid ||
-						!this.webEncPublicKey ||
-						!this.phoneEncPrivateKey
-					) {
-						return;
+					if (!this.#webEncPublicKey) {
+						throw new Error(`webEncPublicKey missing, do pairing before keygen`);
 					}
+					const conversation = querySnapshot.data() as KeygenConversation;
 					if (conversation) {
 						const message = conversation.message;
+						this._validateMessage(conversation);
 						if (
 							message.party === 1 &&
 							message.message &&
@@ -138,19 +101,19 @@ class sdk2 {
 								const nonce = _sodium.randombytes_buf(
 									_sodium.crypto_box_NONCEBYTES,
 								);
-								const encMessage = Uint8ArrayTob64(
+								const encMessage = utils.Uint8ArrayTob64(
 									_sodium.crypto_box_easy(
 										_sodium.to_base64(
 											msg.msg_to_send,
 											base64_variants.ORIGINAL,
 										),
 										nonce,
-										this.webEncPublicKey,
-										this.phoneEncPrivateKey,
+										this.#webEncPublicKey,
+										this.#phoneEncPrivateKey,
 									),
 								);
 
-								await setDoc(doc(db, 'keygen', this.uid!), {
+								await setDoc(doc(this.#db, Collection.keygen, this.#uid), {
 									...conversation,
 									message: {
 										nonce: _sodium.to_hex(nonce),
@@ -162,12 +125,12 @@ class sdk2 {
 								});
 								round++;
 							} else if (msg.p2_key_share) {
-								this.keyshare = msg.p2_key_share;
-								resolve();
+								this.#keyshare = msg.p2_key_share;
 								if (keygenUnsub) {
 									console.log('keygen unsub');
 									keygenUnsub();
 								}
+								resolve();
 							}
 						}
 					}
@@ -177,41 +140,26 @@ class sdk2 {
 					if (keygenUnsub) {
 						keygenUnsub();
 					}
+					resolve();
 				},
 			);
 		});
 	};
 
 	public sign = async () => {
-		await _sodium.ready;
-		if (!this.uid) {
-			throw new Error(`Uid missing`);
-		}
-		if (!this.webEncPublicKey) {
-			throw new Error(`webEncPublicKey missing`);
-		}
-		if (!this.phoneEncPrivateKey) {
-			throw new Error(`phoneEncPrivateKey missing`);
-		}
-		if (!this.keyshare) {
-			throw new Error(`keyshare missing`);
-		}
 		let p2: P2Signature | null = null;
 		let round = 1;
 		return await new Promise<Unsubscribe>((resolve) => {
 			const signUnSub = onSnapshot(
-				doc(db, 'sign', this.uid!),
+				doc(this.#db, Collection.sign, this.#uid),
 				async (querySnapshot) => {
-					const conversation =
-						querySnapshot.data() as SignConversation;
-					if (
-						!this.uid ||
-						!this.webEncPublicKey ||
-						!this.phoneEncPrivateKey ||
-						!this.keyshare
-					) {
-						return;
+					if (!this.#webEncPublicKey) {
+						throw new Error(`webEncPublicKey missing`);
 					}
+					if (!this.#keyshare) {
+						throw new Error(`keyshare missing`);
+					}
+					const conversation = querySnapshot.data() as SignConversation;
 					if (conversation) {
 						const message = conversation.message;
 						this._validateMessage(conversation);
@@ -226,8 +174,8 @@ class sdk2 {
 									this._hashSignMsg(conversation);
 								p2 = new P2Signature(
 									conversation.sessionId,
-									fromHexStringToBytes(messageHash),
-									this.keyshare,
+									utils.fromHexStringToBytes(messageHash),
+									this.#keyshare,
 								);
 							}
 
@@ -238,18 +186,18 @@ class sdk2 {
 								const nonce = _sodium.randombytes_buf(
 									_sodium.crypto_box_NONCEBYTES,
 								);
-								const encMessage = Uint8ArrayTob64(
+								const encMessage = utils.Uint8ArrayTob64(
 									_sodium.crypto_box_easy(
 										_sodium.to_base64(
 											msg.msg_to_send,
 											base64_variants.ORIGINAL,
 										),
 										nonce,
-										this.webEncPublicKey,
-										this.phoneEncPrivateKey,
+										this.#webEncPublicKey,
+										this.#phoneEncPrivateKey,
 									),
 								);
-								await setDoc(doc(db, 'sign', this.uid!), {
+								await setDoc(doc(this.#db, Collection.sign, this.#uid), {
 									...conversation,
 									message: {
 										nonce: _sodium.to_hex(nonce),
@@ -275,20 +223,25 @@ class sdk2 {
 		});
 	};
 
-	public backup = () => {
-		const backupUnsub = onSnapshot(
-			doc(db, 'backup', this.uid!),
-			async (querySnapshot) => {
-				const conversation = querySnapshot.data() as BackupConversation;
-				if (conversation?.backupData) {
-					this.backupData = conversation.backupData;
-					if (backupUnsub) {
-						console.log('backup unsub');
-						backupUnsub();
+	public backup = async () => {
+		await new Promise<void>((resolve) => {
+			const backupUnsub = onSnapshot(
+				doc(this.#db, Collection.backup, this.#uid),
+				async (querySnapshot) => {
+					const conversation = querySnapshot.data() as BackupConversation;
+					if (conversation?.backupData) {
+						this.#backupData = conversation.backupData;
+						if (backupUnsub) {
+							console.log('backup unsub');
+							backupUnsub();
+						}
+						resolve();
 					}
-				}
-			},
-		);
+				},
+			);
+		});
+
+
 	};
 
 	_hashSignMsg = (conversation: SignConversation) => {
@@ -320,7 +273,7 @@ class sdk2 {
 		return messageHash;
 	};
 
-	_validateMessage = (conversation: SignConversation) => {
+	_validateMessage = (conversation: SignConversation | KeygenConversation) => {
 		const expiry_at = conversation.createdAt + conversation.expiry;
 		const now = Date.now();
 		if (conversation.createdAt > now) {
@@ -336,19 +289,19 @@ class sdk2 {
 	};
 
 	_decryptMessage = (message: Message) => {
-		const decMessage = uint8ArrayToUtf8String(
+		const decMessage = utils.uint8ArrayToUtf8String(
 			_sodium.crypto_box_open_easy(
-				b64ToUint8Array(message.message!),
+				utils.b64ToUint8Array(message.message!),
 				_sodium.from_hex(message.nonce!),
-				this.webEncPublicKey!,
-				this.phoneEncPrivateKey!,
+				this.#webEncPublicKey!,
+				this.#phoneEncPrivateKey!,
 			),
 		);
-		const decodedMessage = b64ToString(decMessage);
+		const decodedMessage = utils.b64ToString(decMessage);
 		return decodedMessage;
 	};
 }
 
-const sdkSingleton = new sdk2();
+// const sdkSingleton = new SimulatorSdk();
 
-export { sdkSingleton as sdk };
+// export { sdkSingleton as sdk };
