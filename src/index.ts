@@ -30,7 +30,7 @@ const hasPermission = (origin: string, method: string): boolean => {
 const getKeyring = async (): Promise<AccountManagement> => {
 	if (!keyring) {
 		const storage = await Storage.instance();
-		const sdk = await SnapSDK.instance();
+		const sdk = await SnapSDK.instance(storage);
 		try {
 			const keyringState = await storage.getStorageData();
 			keyring = new AccountManagement(keyringState, storage, sdk);
@@ -52,7 +52,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 	}
 
 	const storage = await Storage.instance();
-	const sdk = await SnapSDK.instance();
+	const sdk = await SnapSDK.instance(storage);
 
 
 	switch (request.method) {

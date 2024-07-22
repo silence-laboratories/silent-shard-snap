@@ -39,10 +39,9 @@ export default class SnapSDK {
     this.#userAction = new UserAction(this.#httpClient);
   }
 
-  static instance = async (storage?: IStorage) => {
+  static instance = async (storage: IStorage) => {
     if (SnapSDK.#instance === null) {
-      const storageInstance = storage ?? await Storage.instance();
-      SnapSDK.#instance = new SnapSDK(storageInstance);
+      SnapSDK.#instance = new SnapSDK(storage);
     } else if (storage) {
       SnapSDK.#instance.#storage = storage;
     }
