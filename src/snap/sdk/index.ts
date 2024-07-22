@@ -57,10 +57,10 @@ export default class SnapSDK {
         deviceName,
         // Avoid chaning this, have some legacy reference
         isAccountExist:
-          silentShareStorage.pairingData.pairingId ===
-          silentShareStorage.newPairingState?.pairingData
-            ?.pairingId &&
-          silentShareStorage.newPairingState?.distributedKey,
+          (silentShareStorage.pairingData.pairingId ===
+            silentShareStorage.newPairingState?.pairingData
+              ?.pairingId &&
+            silentShareStorage.newPairingState?.distributedKey) ? true : false,
       };
     } catch {
       return {
