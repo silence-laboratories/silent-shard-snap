@@ -16,6 +16,7 @@ import {
 } from '../../snap/types';
 import { Unsubscribe } from 'firebase/auth';
 import { DEVICE_NAME } from '../constants';
+import { pubToAddress } from '@ethereumjs/util';
 
 enum Collection {
 	pairing = 'pairing',
@@ -146,10 +147,10 @@ export class SimulatorSdk {
 		});
 	};
 
-	public sign = async () => {
+	public sign = () => {
 		let p2: P2Signature | null = null;
 		let round = 1;
-		return await new Promise<Unsubscribe>((resolve) => {
+		return new Promise<Unsubscribe>((resolve) => {
 			const signUnSub = onSnapshot(
 				doc(this.#db, Collection.sign, this.#uid),
 				async (querySnapshot) => {
@@ -244,6 +245,14 @@ export class SimulatorSdk {
 
 	};
 
+	public getWalletAddress = () => {
+		const publickKey = this.#keyshare?.public_key;
+		if (!publickKey) throw new Error('Publick key not found, simulator not paired');
+		return '0x' + utils.toHexString(
+			pubToAddress(Buffer.from(publickKey, 'hex'))
+		);
+	}
+
 	_hashSignMsg = (conversation: SignConversation) => {
 		let messageHash;
 		switch (conversation.signMetadata) {
@@ -302,6 +311,3 @@ export class SimulatorSdk {
 	};
 }
 
-// const sdkSingleton = new SimulatorSdk();
-
-// export { sdkSingleton as sdk };

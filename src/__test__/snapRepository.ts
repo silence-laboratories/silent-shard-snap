@@ -9,12 +9,31 @@ import { MockStorage } from "./mockStorage";
 import { Signer } from "./signerVerifier";
 import SimpleKeyring from '../snap/keyring';
 
-class SnapRespository {
+export class SnapRepository {
   #request: (request: RequestOptions) => SnapRequest;
   #walletAddress: string | null = null;
 
   constructor(request: (request: RequestOptions) => SnapRequest) {
     this.#request = request;
+  }
+
+  isPaired = async () => {
+    const response = this.#request({
+      method: InternalMethod.TssIsPaired,
+      origin: STAGING_ORIGIN,
+    });
+
+    expect(await response).toRespondWith({
+      isPaired: false,
+      deviceName: null,
+    });
+  }
+
+  unPair = async () => {
+    await this.#request({
+      method: InternalMethod.TssUnPair,
+      origin: STAGING_ORIGIN,
+    });
   }
 
   initPairing = async (isRePair: boolean = false) => {
@@ -77,11 +96,12 @@ class SnapRespository {
     this.#walletAddress = runKeyGenResult.address;
   }
 
-  runBackup = () => {
-    this.#request({
+  runBackup = async () => {
+    const backupReq = this.#request({
       method: InternalMethod.TssRunBackup,
       origin: STAGING_ORIGIN,
     });
+    await backupReq;
   }
 
   getStorage = async () => {
@@ -110,7 +130,7 @@ class SnapRespository {
     await signer.signAndVerifySignTypedDataV4();
   }
 
-  runRePairing = async (newAccountAddress: string) => {
+  runRePairing = async (newAccounAddress?: string) => {
     if (!this.#walletAddress) throw new Error('Do keygen before sign');
     const runRePairingReq = this.#request({
       method: InternalMethod.TssRunRePairing,
@@ -120,6 +140,6 @@ class SnapRespository {
     const runRePairingJson: any = (await runRePairingReq).response;
     const runRePairingResult = runRePairingJson.result as RunRePairingResponse;
 
-    expect(this.#walletAddress).toEqual(runRePairingResult.newAccountAddress);
+    expect(newAccounAddress ?? this.#walletAddress).toEqual(runRePairingResult.newAccountAddress);
   }
 }
