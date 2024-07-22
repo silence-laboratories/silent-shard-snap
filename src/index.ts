@@ -200,16 +200,11 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			await sdk.setSnapVersion(SNAP_VERSION);
 			return;
 
-		case InternalMethod.E2eTestGetKeyShare:
+		case InternalMethod.E2eTestGetStorage:
 			if (process.env.IS_PRODUCTION) {
 				return null;
 			}
-			const silentShareStorage = await storage.getStorageData();
-			return {
-				distributedKey:
-					silentShareStorage.newPairingState?.distributedKey,
-				pairingData: silentShareStorage.pairingData,
-			};
+			return await storage.getStorageData();
 		default:
 			throw new SnapError('Unknown method', SnapErrorCode.UnknownMethod);
 	}

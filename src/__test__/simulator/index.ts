@@ -1,53 +1,81 @@
 import _sodium from 'libsodium-wrappers';
-import { removeUser, signInFirebase } from './firebase';
-import { sdk } from './sdk';
+import { Firebase } from './firebase';
+import { SimulatorSdk } from './sdk';
+import { v4 as uuid } from 'uuid';
 
-export const signIn = async () => {
-	try {
-		await _sodium.ready;
-		const data = await signInFirebase();
-		sdk.setUid(data.user.uid);
-	} catch (error) {
-		console.error("signIn sim err", error);
-	}
-};
+export class Simulator {
+	sdk: SimulatorSdk | null = null;
+	firebase: Firebase;
 
-export const cleanUpSimulation = async () => {
-	try {
-		await removeUser();
-		sdk.cleanState();
-		console.log("cleanUpSimulation sim done");
-	} catch (error) {
-		console.error("cleanUpSimulation sim err", error);
+	constructor() {
+		this.firebase = Firebase.instance();
 	}
-};
 
-export const pairing = async (qrCode: string, isRepair = false) => {
-	try {
-		await sdk.sendPairing(qrCode, isRepair);
-	} catch (error) {
-		console.error("pairing sim err", error);
+	static async init() {
+		await SimulatorSdk.init();
 	}
-};
 
-export const keygen = async () => {
-	try {
-		await sdk.keygen();
-	} catch (error) {
-		console.error("keygen sim err", error);
+	getSdk = () => {
+		if (this.sdk == null) {
+			throw new Error('Do signin before using sdk');
+		}
+		return this.sdk;
 	}
-};
 
-export const sign = async () => {
-	try {
-		return await sdk.sign();
-	} catch (error) {
-		console.error("sign sim err",error);
+	signIn = async () => {
+		try {
+			const data = await this.firebase.signInFirebase();
+			// Using random UUID for testing only.
+			this.sdk = new SimulatorSdk(uuid(), this.firebase.db);
+		} catch (error) {
+			console.error("signIn sim err", error);
+		}
+	};
+
+	pairing = async (qrCode: QrCode, isRepair = false) => {
+		try {
+			const sdk = this.getSdk();
+			return sdk.pairing(qrCode, isRepair);
+		} catch (error) {
+			console.error("pairing sim err", error);
+		}
+	};
+
+	keygen = async () => {
+		try {
+			const sdk = this.getSdk();
+			return sdk.keygen();
+		} catch (error) {
+			throw Error("keygen sim err");
+		}
+	};
+
+	sign = async () => {
+		try {
+			const sdk = this.getSdk();
+			return sdk.sign();
+		} catch (error) {
+			throw Error('"sign sim err"');
+		}
 	}
+
+	backup = async () => {
+		const sdk = this.getSdk();
+		return sdk.backup();
+	}
+
+	getWalletAddress = () => {
+		const sdk = this.getSdk();
+		return sdk.getWalletAddress();
+	}
+
+	cleanUpSimulation = () => {
+		try {
+			this.sdk = null;
+			console.log("cleanUpSimulation sim done");
+		} catch (error) {
+			console.error("cleanUpSimulation sim err", error);
+		}
+	};
+
 }
-
-export const backup = () => {
-	sdk.backup();
-}
-
-

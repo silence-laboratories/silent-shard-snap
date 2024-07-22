@@ -1,8 +1,4 @@
-import { IP1KeyShare } from '@silencelaboratories/ecdsa-tss';
-import { DistributedKey, KeyringState, SignMetadata } from '../types';
-import { fromHexStringToBytes } from '../snap/utils';
-import { SnapError, SnapErrorCode } from '../error';
-import * as SignAction from '../snap/actions/sign';
+import { DistributedKey, KeyringState } from '../snap/types';
 
 export const TO_ADDRESS = '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb';
 
@@ -35,47 +31,6 @@ export const genMockKeyring = (
 	};
 };
 
-export const genMockRunTssSign =
-	(pairingData: any) =>
-	async (
-		hashAlg: string,
-		message: string,
-		messageHashHex: string,
-		signMetadata: SignMetadata,
-		accountId: number,
-		keyShare: IP1KeyShare,
-	) => {
-		if (messageHashHex.startsWith('0x')) {
-			messageHashHex = messageHashHex.slice(2);
-		}
-		if (message.startsWith('0x')) {
-			message = message.slice(2);
-		}
-
-		// TODO: Do we want to simulate token expiration?
-		// let silentShareStorage = await getSilentShareStorage();
-		// let pairingData = silentShareStorage.pairingData;
-		// if (pairingData.tokenExpiration < Date.now() - TOKEN_LIFE_TIME) {
-		// 	pairingData = await refreshPairing();
-		// }
-		const messageHash = fromHexStringToBytes(messageHashHex);
-		if (messageHash.length !== 32) {
-			throw new SnapError(
-				'Invalid length of messageHash, should be 32 bytes',
-				SnapErrorCode.InvalidMessageHashLength,
-			);
-		}
-
-		return await SignAction.sign(
-			pairingData,
-			keyShare,
-			hashAlg,
-			message,
-			messageHash,
-			signMetadata,
-			accountId,
-		);
-	};
 export interface Eip1559Tx {
 	[key: string]: string | never[];
 	type: string;
