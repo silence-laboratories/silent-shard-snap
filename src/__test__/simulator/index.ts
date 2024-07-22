@@ -24,7 +24,7 @@ export class Simulator {
 
 	signIn = async () => {
 		try {
-			const data = await this.firebase.signInFirebase();
+			await this.firebase.signInFirebase();
 			// Using random UUID for testing only.
 			this.sdk = new SimulatorSdk(uuid(), this.firebase.db);
 		} catch (error) {
@@ -32,7 +32,7 @@ export class Simulator {
 		}
 	};
 
-	pairing = async (qrCode: QrCode, isRepair = false) => {
+	pairing = (qrCode: QrCode, isRepair = false) => {
 		try {
 			const sdk = this.getSdk();
 			return sdk.pairing(qrCode, isRepair);
@@ -41,7 +41,7 @@ export class Simulator {
 		}
 	};
 
-	keygen = async () => {
+	keygen = () => {
 		try {
 			const sdk = this.getSdk();
 			return sdk.keygen();
@@ -50,7 +50,7 @@ export class Simulator {
 		}
 	};
 
-	sign = async () => {
+	sign = () => {
 		try {
 			const sdk = this.getSdk();
 			return sdk.sign();
@@ -59,7 +59,7 @@ export class Simulator {
 		}
 	}
 
-	backup = async () => {
+	backup = () => {
 		const sdk = this.getSdk();
 		return sdk.backup();
 	}
@@ -69,8 +69,9 @@ export class Simulator {
 		return sdk.getWalletAddress();
 	}
 
-	cleanUpSimulation = () => {
+	cleanUpSimulation = async () => {
 		try {
+			await this.firebase.removeUser();
 			this.sdk = null;
 			console.log("cleanUpSimulation sim done");
 		} catch (error) {

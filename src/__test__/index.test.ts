@@ -108,7 +108,7 @@ describe('test rpc requests to Snap', () => {
 			unsub();
 
 			// Cleanup
-			simulator.cleanUpSimulation();
+			await simulator.cleanUpSimulation();
 
 		}, 60 * 1000);
 
@@ -155,9 +155,9 @@ describe('test rpc requests to Snap', () => {
 			await snapRepository.runRePairing();
 
 			// Cleanup
-			simulator.cleanUpSimulation();
+			await simulator.cleanUpSimulation();
 
-		}, 60 * 1000);
+		});
 
 		it('tss_runRePairing should be success with different account', async () => {
 
@@ -213,9 +213,10 @@ describe('test rpc requests to Snap', () => {
 			await snapRepository.runRePairing(simulator.A.getWalletAddress());
 
 			// Cleanup
-			simulator.A.cleanUpSimulation();
-			simulator.B.cleanUpSimulation();
+			await simulator.A.cleanUpSimulation();
+			await simulator.B.cleanUpSimulation();
 
-		}, 60 * 1000);
+		});
+
 	});
 });
