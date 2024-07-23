@@ -40,16 +40,6 @@ export class MockStorage implements IStorage {
     };
   }
 
-  // getWalletAddress = () => {
-  //   const newPairingState = this.#storageData.newPairingState;
-  //   if (!newPairingState?.distributedKey || !newPairingState.accountId)
-  //     throw new Error('Do keygen before creating account',);
-
-  //   const distributedKey: DistributedKey = newPairingState.distributedKey;
-  //   const address = utils.getAddressFromDistributedKey(distributedKey);
-  //   return address;
-  // }
-
   setStorageData = async (data: Omit<StorageData, "version">): Promise<void> => {
     this.#storageData = { ...data, version: this.#VERSION };
   }

@@ -1,35 +1,4 @@
-import { DistributedKey, KeyringState } from '../snap/types';
-
 export const TO_ADDRESS = '0x0c54fccd2e384b4bb6f2e405bf5cbc15a017aafb';
-
-export const genMockKeyring = (
-	distributedKey: DistributedKey,
-	address: string,
-): KeyringState => {
-	const accountId = distributedKey.accountId;
-	return {
-		wallets: {
-			[accountId]: {
-				account: {
-					id: 'f4211653-1b5f-4497-b5e6-f7b56824ba21',
-					options: {},
-					address,
-					methods: [
-						'eth_sign',
-						'eth_signTransaction',
-						'eth_signTypedData_v1',
-						'eth_signTypedData_v3',
-						'eth_signTypedData_v4',
-						'personal_sign',
-					],
-					type: 'eip155:eoa',
-				},
-				distributedKey: distributedKey,
-			},
-		},
-		requests: {},
-	};
-};
 
 export interface Eip1559Tx {
 	[key: string]: string | never[];

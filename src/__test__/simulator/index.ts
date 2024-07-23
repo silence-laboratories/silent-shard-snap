@@ -1,7 +1,6 @@
 import _sodium from 'libsodium-wrappers';
 import { Firebase } from './firebase';
 import { SimulatorSdk } from './sdk';
-import { v4 as uuid } from 'uuid';
 
 export class Simulator {
 	sdk: SimulatorSdk | null = null;
@@ -26,7 +25,7 @@ export class Simulator {
 		try {
 			await this.firebase.signInFirebase();
 			// Using random UUID for testing only.
-			this.sdk = new SimulatorSdk(uuid(), this.firebase.db);
+			this.sdk = new SimulatorSdk(`simulator-${Math.floor(Math.random() * 1000000)}`, this.firebase.db);
 		} catch (error) {
 			console.error("signIn sim err", error);
 		}

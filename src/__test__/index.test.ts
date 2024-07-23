@@ -129,23 +129,15 @@ describe('test rpc requests to Snap', () => {
 			await simulator.pairing(qrCode);
 			await snapRepository.runPairing();
 
-
-
 			// Test key generation
 			const keygenPromise = snapRepository.runKeygen();
 			await simulator.keygen();
 			await keygenPromise;
 
-
-
 			// Test backup
 			const backupPromise = snapRepository.runBackup();
 			await simulator.backup();
 			await backupPromise;
-
-
-
-
 
 			// Test init rePairing
 			const rePairingQrCode = await snapRepository.initPairing();
