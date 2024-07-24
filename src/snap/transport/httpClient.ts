@@ -15,6 +15,13 @@ export default class HttpClient {
     this.#baseUrl = baseUrl;
   }
 
+  /**
+   * Modified fetch is build on fetch to read the response in expected way and handle errors
+   * 
+   * @param input 
+   * @param init 
+   * @returns Response
+   */
   #modifiedFetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     return await fetch(input, init)
       .then(async (data) => {
@@ -38,6 +45,12 @@ export default class HttpClient {
   };
 
 
+  /**
+   * get JWT token for accessing other endpoints.
+   * 
+   * @param pairingId 
+   * @param signature 
+   */
   getTokenEndpoint = async (
     pairingId: string,
     signature: string,
@@ -59,6 +72,12 @@ export default class HttpClient {
     return data;
   };
 
+  /**
+   * Refresh JWT token
+   * 
+   * @param token 
+   * @param signedToken 
+   */
   refreshTokenEndpoint = async (
     token: string,
     signedToken: string,
@@ -80,6 +99,16 @@ export default class HttpClient {
     return data;
   };
 
+  /**
+   * Send Message to the mobile
+   * using expectResponse, we can wait for the response.
+   * 
+   * @param token 
+   * @param type 
+   * @param conversation 
+   * @param expectResponse 
+   * @param docId 
+   */
   sendMessage = async <T>(
     token: string,
     type: 'keygen' | 'sign' | 'pairing' | 'backup' | 'users',
@@ -104,6 +133,9 @@ export default class HttpClient {
     return data;
   };
 
+  /**
+   * Get snap version from server.
+   */
   snapVersion = async () => {
     const url = this.#baseUrl + `/snapVersion`;
     const data = await fetch(url);

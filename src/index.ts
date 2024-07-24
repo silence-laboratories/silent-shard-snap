@@ -17,6 +17,13 @@ window.Buffer = window.Buffer || Buffer;
 
 let keyring: AccountManagement;
 
+/**
+ * @abstract check if the origin has permission to call the method
+ * 
+ * @param origin 
+ * @param method 
+ * @returns boolean
+ */
 const hasPermission = (origin: string, method: string): boolean => {
 	if (process.env.IS_PRODUCTION) {
 		return Boolean(PERMISSIONS.get(origin)?.includes(method));
@@ -27,6 +34,11 @@ const hasPermission = (origin: string, method: string): boolean => {
 	);
 };
 
+/**
+ * Get storage data and initialize the keyring object.
+ * 
+ * @returns AccountManagement
+ */
 const getKeyring = async (): Promise<AccountManagement> => {
 	if (!keyring) {
 		const storage = await Storage.instance();
@@ -196,10 +208,20 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 				latestVersion: snapLatestVersion,
 			};
 
+		/**
+		 * tss_setSnapVersion
+		 * @abstract set the current snap version
+		 *
+		 * @returns void
+		 *
+		 */
 		case InternalMethod.TssSetSnapVersion:
 			await sdk.setSnapVersion(SNAP_VERSION);
 			return;
 
+		/**
+		 * @abstract Get the snap storage, only in staging environment for tests
+		 */
 		case InternalMethod.E2eTestGetStorage:
 			if (process.env.IS_PRODUCTION) {
 				return null;

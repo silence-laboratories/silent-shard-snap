@@ -39,6 +39,12 @@ export default class SnapSDK {
     this.#userAction = new UserAction(this.#httpClient);
   }
 
+  /**
+   * Create instance if not created, use storage provided. 
+   * This is done so that tests can provide there own storage.
+   * @param storage 
+   * @returns instance of SnapSDK
+   */
   static instance = async (storage: IStorage) => {
     if (SnapSDK.#instance === null) {
       SnapSDK.#instance = new SnapSDK(storage);
@@ -48,6 +54,9 @@ export default class SnapSDK {
     return SnapSDK.#instance;
   }
 
+  /**
+   * Check is snap is paired or not
+   */
   isPaired = async () => {
     try {
       const silentShareStorage = await this.#storage.getStorageData();
@@ -70,15 +79,25 @@ export default class SnapSDK {
     }
   }
 
+  /**
+   * Unpair the snap and clear storage data
+   */
   unpair = async () => {
     await this.#storage.clearStorageData();
   }
 
+  /**
+   * initialize pairing 
+   */
   initPairing = async () => {
     const qrCode = await this.#pairingAction.init();
     return qrCode;
   }
 
+  /**
+   * run pairing, should be called after init pairing
+   * timout is 30sec for this method. Will throw error after that.
+   */
   runPairing = async () => {
     const result = await this.#pairingAction.getPairingSessionData();
     await this.#storage.setStorageData({
@@ -98,6 +117,12 @@ export default class SnapSDK {
     };
   }
 
+  /**
+   * re pair with the existing account in the storage 
+   * OR
+   * can pair with new account
+   * timout is 30sec for this method. Will throw error after that.
+   */
   runRePairing = async () => {
     const silentShareStorage: StorageData = await this.#storage.getStorageData();
 
@@ -141,6 +166,9 @@ export default class SnapSDK {
     };
   }
 
+  /**
+   * Refersh the JWT token of a user
+   */
   refreshPairing = async () => {
     const silentShareStorage: StorageData = await this.#storage.getStorageData();
     const pairingData = silentShareStorage.pairingData;
@@ -152,6 +180,9 @@ export default class SnapSDK {
     return result.newPairingData;
   }
 
+  /**
+   * Get pairing data and storage data from storage
+   */
   #getPairingDataAndStorage = async () => {
     const silentShareStorage: StorageData = await this.#storage.getStorageData();
     let pairingData = silentShareStorage.pairingData;
@@ -161,6 +192,11 @@ export default class SnapSDK {
     return { pairingData, silentShareStorage };
   }
 
+  /**
+   * Run keygen will be called after pairing is done
+   * Snap and Mobile will communicate few times. 
+   * Each commuincation has a timeout of 30sec
+   */
   runKeygen = async () => {
     const { pairingData, silentShareStorage } = await this.#getPairingDataAndStorage();
     const wallets = silentShareStorage.wallets;
@@ -189,6 +225,10 @@ export default class SnapSDK {
     };
   }
 
+  /**
+   * Run backup should be called after keygen is done
+   * This will encrypt the backup using MetaMask entropy and send the encrypted backup to the phone.
+   */
   runBackup = async () => {
     const { pairingData, silentShareStorage } = await this.#getPairingDataAndStorage();
     if (silentShareStorage.newPairingState?.distributedKey) {
@@ -209,6 +249,19 @@ export default class SnapSDK {
       );
   }
 
+  /**
+   * This should be called after keygen is done
+   * To sign a new transcation, snap and mobile will communicate using transport.
+   * Consist of 3 rounds and each round has a timeout of 30sec.
+   * 
+   * @param hashAlg 
+   * @param message 
+   * @param messageHashHex 
+   * @param signMetadata 
+   * @param accountId 
+   * @param keyShare 
+   * @returns SignResult
+   */
   runSign = async (
     hashAlg: string,
     message: string,
@@ -243,15 +296,30 @@ export default class SnapSDK {
     );
   }
 
+  /**
+   * This is to set the snap version of a user in database 
+   * so phone can respond accordingly and ask user to update the snap
+   * This feature is still experimental.
+   * @param snapVersion 
+   */
   setSnapVersion = async (snapVersion: string) => {
     const { pairingData } = await this.#getPairingDataAndStorage();
     await this.#userAction.setSnapVersion(pairingData.token, snapVersion);
   }
 
+  /**
+   * To get the snap version from a truthful source 
+   * If new version is available then dApp can prompt user to update the snap
+   */
   getSnapVersion = async () => {
     return await this.#httpClient.snapVersion();
   }
 
+  /**
+   * This method is used only for tests 
+   * This method is not available in production
+   * This can return critical information
+   */
   getStorageData = async () => {
     return await this.#storage.getStorageData();
   }

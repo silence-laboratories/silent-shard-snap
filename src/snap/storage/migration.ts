@@ -12,14 +12,27 @@ export class Migration {
     this.#latestVersion = version;
   };
 
+  /**
+   * return the latest storage data with modified type
+   * @returns V1StorageData
+   */
   #getV1StorageData = (): V1StorageData => {
     return this.#storageData as V1StorageData;
   }
 
+  /**
+   * Migrate V0 data to V1
+   * @param data V0StorageData
+   * @returns V1StorageData
+   */
   #migrateV0toV1 = (data: V0StorageData): V1StorageData => {
     return { ...data, version: 1 };
   }
 
+  /**
+   * get version of the current storage data
+   * @returns version number
+   */
   #getVersion = () => {
     try {
       //@ts-ignore
@@ -28,6 +41,10 @@ export class Migration {
     catch (e) { return 0; }
   }
 
+  /**
+   * Migrate to any old version to latest version
+   * Right now only migration possible is from V0 -> V1
+   */
   #migrate = () => {
     const currentVersion = this.#getVersion()
 
@@ -40,6 +57,10 @@ export class Migration {
     }
   }
 
+  /**
+   * Migrate the data the return the latest storage data
+   * @returns StorageData
+   */
   public getStorageData = () => {
     this.#migrate();
     return this.#getV1StorageData();

@@ -12,7 +12,6 @@ export enum InternalMethod {
 	TssSnapVersion = 'tss_snapVersion',
 	TssRunRePairing = 'tss_runRePairing',
 	TssSetSnapVersion = 'tss_setSnapVersion',
-	E2eTestGetKeyShare = 'e2e_test_getKeyShare',
 	E2eTestGetStorage = 'e2e_test_getStorage',
 	TssRunBackup = 'tss_runBackup',
 }

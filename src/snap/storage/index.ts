@@ -11,7 +11,11 @@ const STORAGE_KEY = 'SilentShare1';
 export class Storage implements IStorage {
   static #instance: Storage | null = null;
   readonly #VERSION = 1;
-  #dataUpToDate = false;
+
+  /**
+   * Save a storage data locally to read the data faster. 
+   * If null then read from the storage first.
+   */
   #storageData: StorageData | null = null;
 
   static instance = async () => {
@@ -28,7 +32,6 @@ export class Storage implements IStorage {
   clearStorageData = async () => {
     try {
       this.#storageData = null;
-      this.#dataUpToDate = true;
 
       await snap.request({
         method: 'snap_manageState',
@@ -64,7 +67,6 @@ export class Storage implements IStorage {
         params: { operation: 'update', newState: state },
       });
       this.#storageData = { ...data, version: this.#VERSION };
-      this.#dataUpToDate = true;
       return;
     } catch (error) {
       throw error instanceof Error
@@ -76,12 +78,11 @@ export class Storage implements IStorage {
   /**
    * Retrieve SilentShareStorage
    *
-   * @returns SilentShareStorage object
+   * @returns StorageData object
    */
   getStorageData = async (): Promise<StorageData> => {
     try {
-      if (this.#storageData &&
-        this.#dataUpToDate) {
+      if (this.#storageData) {
         return this.#storageData;
       }
 
@@ -99,7 +100,6 @@ export class Storage implements IStorage {
       );
 
       this.#storageData = jsonObject;
-      this.#dataUpToDate = true;
 
       return jsonObject;
     } catch (error) {
