@@ -1,13 +1,12 @@
 import { RequestOptions, SnapRequest } from "@metamask/snaps-jest";
 import { DEVICE_NAME, INIT_PAIR_PANEL_DESCRIPTION, INIT_PAIR_PANEL_HEADING, STAGING_ORIGIN } from "./constants";
 import { InternalMethod } from "../permissions";
-import { DialogType } from "@metamask/snaps-types";
-import { panel, heading, divider, text } from "@metamask/snaps-ui";
 import { StorageData } from "../snap/types";
 import SnapSDK from "../snap/sdk";
 import { MockStorage } from "./mockStorage";
 import { Signer } from "./signerVerifier";
 import SimpleKeyring from '../snap/keyring';
+import { DialogType, panel, text, divider, heading } from '@metamask/snaps-sdk';
 
 export class SnapRepository {
   #request: (request: RequestOptions) => SnapRequest;
