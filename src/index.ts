@@ -1,48 +1,29 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import {
-	DialogType,
-	OnKeyringRequestHandler,
-	OnRpcRequestHandler,
-} from '@metamask/snaps-types';
-import * as sdk from './snap/sdk';
-import { deleteStorage, getSilentShareStorage } from './snap/storage';
-import { isPaired } from './snap/sdk';
-import { panel, text, heading, divider } from '@metamask/snaps-sdk';
-import { SnapError, SnapErrorCode } from './error';
+import { OnKeyringRequestHandler, OnRpcRequestHandler } from '@metamask/snaps-types';
 import { handleKeyringRequest } from '@metamask/keyring-api';
-import { SimpleKeyring } from './snap/keyring';
-import { snapVersion } from './firebaseApi';
-import {
-	InternalMethod,
-	PERMISSIONS,
-	STAGING_PERMISSIONS,
-} from './permissions';
 import { pubToAddress } from '@ethereumjs/util';
+import AccountManagement from './snap/keyring';
+import { SnapError, SnapErrorCode } from './snap/error';
+import { InternalMethod, PERMISSIONS, STAGING_PERMISSIONS, } from './permissions';
+import SnapSDK from './snap/sdk';
+import { Storage } from './snap/storage';
 import { version as SNAP_VERSION } from './../package.json';
-import { StorageData } from './types';
+import { initPairingConfirmation } from './snap/utils/snapUi';
+import * as utils from './snap/utils/utils';
+
 window.Buffer = window.Buffer || Buffer;
 
-let keyring: SimpleKeyring;
+let keyring: AccountManagement;
 
-const showConfirmationMessage = async (
-	prompt: string,
-	description: string[],
-) => {
-	return await snap.request({
-		method: 'snap_dialog',
-		params: {
-			type: DialogType.Confirmation,
-			content: panel([
-				heading(prompt),
-				divider(),
-				...description.map((t) => text(t)),
-			]),
-		},
-	});
-};
-
+/**
+ * @abstract check if the origin has permission to call the method
+ * 
+ * @param origin 
+ * @param method 
+ * @returns boolean
+ */
 const hasPermission = (origin: string, method: string): boolean => {
 	if (process.env.IS_PRODUCTION) {
 		return Boolean(PERMISSIONS.get(origin)?.includes(method));
@@ -51,6 +32,25 @@ const hasPermission = (origin: string, method: string): boolean => {
 		Boolean(PERMISSIONS.get(origin)?.includes(method)) ||
 		Boolean(STAGING_PERMISSIONS.get(origin)?.includes(method))
 	);
+};
+
+/**
+ * Get storage data and initialize the keyring object.
+ * 
+ * @returns AccountManagement
+ */
+const getKeyring = async (): Promise<AccountManagement> => {
+	if (!keyring) {
+		const storage = await Storage.instance();
+		const sdk = await SnapSDK.instance(storage);
+		try {
+			const keyringState = await storage.getStorageData();
+			keyring = new AccountManagement(keyringState, storage, sdk);
+		} catch {
+			keyring = new AccountManagement({ wallets: {}, requests: {} }, storage, sdk);
+		}
+	}
+	return keyring;
 };
 
 export const onRpcRequest: OnRpcRequestHandler = async ({
@@ -62,12 +62,17 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			`Origin '${origin}' is not allowed to call '${request.method}'`,
 		);
 	}
+
+	const storage = await Storage.instance();
+	const sdk = await SnapSDK.instance(storage);
+
+
 	switch (request.method) {
 		case InternalMethod.TssIsPaired:
-			return await isPaired();
+			return await sdk.isPaired();
 
 		case InternalMethod.TssUnPair:
-			await deleteStorage();
+			await sdk.unpair();
 			return;
 
 		/**
@@ -85,14 +90,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			const isRePair = (request.params as [{ isRePair: boolean }])[0]
 				.isRePair;
 			if (!isRePair) {
-				let initPairingRequest = await showConfirmationMessage(
-					`Hey there! 👋🏻 Welcome to Silent Shard Snap – your gateway to distributed-self custody!`,
-					[
-						'👉🏻 To get started, grab the companion Silent Shard app from either the Apple App Store or Google Play.',
-						`👉🏻 Just search for 'Silent Shard' and follow the simple steps to set up your MPC account.`,
-						`Happy to have you onboard! 🥳`,
-					],
-				);
+				const initPairingRequest = await initPairingConfirmation();
 
 				if (!initPairingRequest) {
 					throw new SnapError(
@@ -175,9 +173,9 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			return {
 				address:
 					'0x' +
-					pubToAddress(
+					utils.toHexString(pubToAddress(
 						Buffer.from(keygenRes.distributedKey.publicKey, 'hex'),
-					).toString('hex'),
+					)),
 			};
 
 		/**
@@ -203,44 +201,35 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 		 *
 		 */
 		case InternalMethod.TssSnapVersion:
-			const snapLatestVersion = await snapVersion();
+			const snapLatestVersion = await sdk.getSnapVersion();
 
 			return {
 				currentVersion: SNAP_VERSION,
 				latestVersion: snapLatestVersion,
 			};
 
+		/**
+		 * tss_setSnapVersion
+		 * @abstract set the current snap version
+		 *
+		 * @returns void
+		 *
+		 */
 		case InternalMethod.TssSetSnapVersion:
 			await sdk.setSnapVersion(SNAP_VERSION);
 			return;
 
-		case InternalMethod.E2eTestGetKeyShare:
+		/**
+		 * @abstract Get the snap storage, only in staging environment for tests
+		 */
+		case InternalMethod.E2eTestGetStorage:
 			if (process.env.IS_PRODUCTION) {
 				return null;
 			}
-			let silentShareStorage: StorageData = await getSilentShareStorage();
-			return {
-				distributedKey:
-					silentShareStorage.newPairingState?.distributedKey,
-				pairingData: silentShareStorage.pairingData,
-			};
+			return await storage.getStorageData();
 		default:
 			throw new SnapError('Unknown method', SnapErrorCode.UnknownMethod);
 	}
-};
-
-const getKeyring = async (): Promise<SimpleKeyring> => {
-	if (!keyring) {
-		if (!keyring) {
-			try {
-				const keyringState = await getSilentShareStorage();
-				keyring = new SimpleKeyring(keyringState);
-			} catch {
-				keyring = new SimpleKeyring({ wallets: {}, requests: {} });
-			}
-		}
-	}
-	return keyring;
 };
 
 export const onKeyringRequest: OnKeyringRequestHandler = async ({

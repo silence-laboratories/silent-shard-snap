@@ -1,10 +1,10 @@
 // Copyright (c) Silence Laboratories Pte. Ltd.
 // This software is licensed under the Silence Laboratories License Agreement.
 
-import { SnapError, SnapErrorCode } from '../error';
 import _sodium from 'libsodium-wrappers';
+import { SnapError, SnapErrorCode } from './error';
 
-export const requestEntropy = async (salt?: Uint8Array) => {
+const requestEntropy = async (salt?: Uint8Array) => {
 	const hexSalt = salt ?? crypto.getRandomValues(new Uint8Array(32));
 	const entropy = (await snap.request({
 		method: 'snap_getEntropy',
@@ -17,7 +17,7 @@ export const requestEntropy = async (salt?: Uint8Array) => {
 	return entropy.slice(2);
 };
 
-export const encMessage = async (message: string) => {
+const encMessage = async (message: string) => {
 	const salt = crypto.getRandomValues(new Uint8Array(32));
 	const nonce = _sodium.randombytes_buf(_sodium.crypto_secretbox_NONCEBYTES);
 	const entropyHex = await requestEntropy(salt);
@@ -29,7 +29,7 @@ export const encMessage = async (message: string) => {
 	)}.${_sodium.crypto_secretbox_easy(message, nonce, encKey, 'base64')}`;
 };
 
-export const decMessage = async (cipherText: string): Promise<Uint8Array> => {
+const decMessage = async (cipherText: string): Promise<Uint8Array> => {
 	const array = cipherText.split('.');
 	if (array.length !== 3) {
 		throw new SnapError(
@@ -46,3 +46,9 @@ export const decMessage = async (cipherText: string): Promise<Uint8Array> => {
 	const cipherMessage = _sodium.from_base64(array[2]!);
 	return _sodium.crypto_secretbox_open_easy(cipherMessage, nonce, encKey);
 };
+
+export {
+	encMessage,
+	decMessage,
+	requestEntropy
+}

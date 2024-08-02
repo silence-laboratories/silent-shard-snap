@@ -9,45 +9,35 @@ import {
 	SubmitRequestResponse,
 	emitSnapKeyringEvent,
 } from '@metamask/keyring-api';
-import {
-	stripHexPrefix,
-	hashPersonalMessage,
-} from '@ethereumjs/util';
+import { stripHexPrefix, hashPersonalMessage } from '@ethereumjs/util';
 import type { Json } from '@metamask/utils';
-import {
-	DistributedKey,
-	KeyringState,
-	SignMetadata,
-	StorageData,
-	Wallet,
-} from '../types';
-import {
-	deleteStorage,
-	getSilentShareStorage,
-	saveSilentShareStorage,
-} from './storage';
-import { runSign } from './sdk';
-import { Common, Hardfork } from '@ethereumjs/common';
-import { TransactionFactory } from '@ethereumjs/tx';
-import { getAddressFromDistributedKey, isEvmChain, toHexString } from './utils';
 import { JsonRpcRequest } from '@metamask/snaps-types';
-import keccak256 from 'keccak256';
 import {
 	SignTypedDataVersion,
 	TypedDataUtils,
 	typedSignatureHash,
 } from '@metamask/eth-sig-util';
-import { SnapError, SnapErrorCode } from '../error';
-import { RLP } from '@ethereumjs/rlp';
 import { InvalidRequestError } from '@metamask/snaps-sdk';
+import { Common, Hardfork } from '@ethereumjs/common';
+import { TransactionFactory } from '@ethereumjs/tx';
+import { RLP } from '@ethereumjs/rlp';
+import keccak256 from 'keccak256';
+import SnapSDK from './sdk';
+import * as utils from './utils/utils';
+import { SnapError, SnapErrorCode } from './error';
+import { Wallet, IStorage, KeyringState, StorageData, DistributedKey, SignMetadata, } from './types';
 
-export class SimpleKeyring implements Keyring {
+export default class AccountManagement implements Keyring {
 	#wallets: Record<string, Wallet>;
 	#requests: Record<string, KeyringRequest>;
+	#storage: IStorage;
+	#sdk: SnapSDK;
 
-	constructor(state: KeyringState) {
+	constructor(state: KeyringState, storage: IStorage, sdk: SnapSDK) {
 		this.#wallets = state.wallets;
 		this.#requests = state.requests;
+		this.#storage = storage;
+		this.#sdk = sdk;
 	}
 
 	async listAccounts(): Promise<KeyringAccount[]> {
@@ -63,7 +53,7 @@ export class SimpleKeyring implements Keyring {
 	async createAccount(
 		options: Record<string, Json> = {},
 	): Promise<KeyringAccount> {
-		let silentShareStorage: StorageData = await getSilentShareStorage();
+		const silentShareStorage: StorageData = await this.#storage.getStorageData();
 		const newPairingState = silentShareStorage.newPairingState;
 		if (!newPairingState?.distributedKey || !newPairingState.accountId) {
 			throw new SnapError(
@@ -72,11 +62,10 @@ export class SimpleKeyring implements Keyring {
 			);
 		}
 
-		let distributedKey: DistributedKey = newPairingState.distributedKey;
-		let account: KeyringAccount;
-		const address = getAddressFromDistributedKey(distributedKey);
+		const distributedKey: DistributedKey = newPairingState.distributedKey;
+		const address = utils.getAddressFromDistributedKey(distributedKey);
 
-		account = {
+		const account: KeyringAccount = {
 			id: newPairingState.accountId,
 			options,
 			address,
@@ -128,7 +117,7 @@ export class SimpleKeyring implements Keyring {
 	): Promise<string[]> {
 		// The `id` argument is not used because all accounts created by this snap
 		// are expected to be compatible with any EVM chain.2
-		return chains.filter((chain) => isEvmChain(chain));
+		return chains.filter((chain) => utils.isEvmChain(chain));
 	}
 
 	async updateAccount(account: KeyringAccount): Promise<void> {
@@ -156,21 +145,21 @@ export class SimpleKeyring implements Keyring {
 	}
 
 	async deleteAccount(id: string): Promise<void> {
-		let silentShareStorage: StorageData = await getSilentShareStorage();
+		const silentShareStorage: StorageData = await this.#storage.getStorageData();
 		await this.#emitEvent(KeyringEvent.AccountDeleted, { id });
 		delete this.#wallets[id];
 		if (
 			silentShareStorage.newPairingState?.pairingData &&
 			silentShareStorage.newPairingState?.pairingData?.pairingId !==
-				silentShareStorage.pairingData.pairingId
+			silentShareStorage.pairingData.pairingId
 		)
-			await saveSilentShareStorage({
+			await this.#storage.setStorageData({
 				...silentShareStorage,
 				pairingData: silentShareStorage.newPairingState.pairingData,
 				wallets: this.#wallets,
 				requests: this.#requests,
 			});
-		else deleteStorage();
+		else await this.#storage.clearStorageData();
 	}
 
 	async listRequests(): Promise<KeyringRequest[]> {
@@ -241,14 +230,14 @@ export class SimpleKeyring implements Keyring {
 		switch (method) {
 			case 'personal_sign': {
 				const [message, from] = params as [string, string];
-				return this.signPersonalMessage(from, message, runSign);
+				return this.signPersonalMessage(from, message);
 			}
 
 			case 'eth_sendTransaction':
 			case 'eth_signTransaction':
 			case 'sign_transaction': {
 				const [tx] = params as [Json];
-				return await this.signTransaction(tx, runSign);
+				return await this.signTransaction(tx);
 			}
 
 			case 'eth_signTypedData_v1': {
@@ -257,7 +246,7 @@ export class SimpleKeyring implements Keyring {
 					Json,
 					{ version: SignTypedDataVersion },
 				];
-				return this.signTypedData(from, data, opts, method, runSign);
+				return this.signTypedData(from, data, opts, method);
 			}
 			case 'eth_signTypedData_v3': {
 				const [from, data] = params as [string, Json];
@@ -266,7 +255,6 @@ export class SimpleKeyring implements Keyring {
 					data,
 					{ version: SignTypedDataVersion.V3 },
 					method,
-					runSign
 				);
 			}
 			case 'eth_signTypedData_v4': {
@@ -276,13 +264,12 @@ export class SimpleKeyring implements Keyring {
 					data,
 					{ version: SignTypedDataVersion.V4 },
 					method,
-					runSign
 				);
 			}
 
 			case 'eth_sign': {
 				const [from, data] = params as [string, string];
-				return this.signMessage(from, data, runSign);
+				return this.signMessage(from, data);
 			}
 
 			default: {
@@ -291,7 +278,7 @@ export class SimpleKeyring implements Keyring {
 		}
 	}
 
-	async signTransaction(tx: any, runTssSign: RunSign): Promise<string> {
+	async signTransaction(tx: any): Promise<string> {
 		const { from } = tx;
 		// Patch the transaction to make sure that the `chainId` is a hex string.
 		if (!tx.chainId.startsWith('0x')) {
@@ -316,14 +303,14 @@ export class SimpleKeyring implements Keyring {
 		const serializedMessage =
 			tx1.type == 0
 				? Buffer.from(RLP.encode(msg)).toString('hex')
-				: toHexString(msg as Uint8Array);
-		const hashedMsg = toHexString(tx1.getHashedMessageToSign());
+				: utils.toHexString(msg as Uint8Array);
+		const hashedMsg = utils.toHexString(tx1.getHashedMessageToSign());
 		const wallet = this.#getWalletByAddress(from);
 
 		const transactionMetadata: SignMetadata =
 			tx1.type == 0 ? 'legacy_transaction' : 'eth_transaction';
 
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'keccak256',
 			serializedMessage,
 			hashedMsg,
@@ -358,16 +345,16 @@ export class SimpleKeyring implements Keyring {
 			version: SignTypedDataVersion.V1,
 		},
 		method: SignMetadata,
-		runTssSign: RunSign
+
 	): Promise<string> {
 		const wallet = this.#getWalletByAddress(from);
 		const messageHash =
 			opts.version === SignTypedDataVersion.V1
 				? typedSignatureHash(data as any)
 				: TypedDataUtils.eip712Hash(data as any, opts.version).toString(
-						'hex',
-				  );
-		const { signature, recId } = await runTssSign(
+					'hex',
+				);
+		const { signature, recId } = await this.#sdk.runSign(
 			'none',
 			messageHash,
 			messageHash,
@@ -378,13 +365,13 @@ export class SimpleKeyring implements Keyring {
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async signPersonalMessage(from: string, request: string, runTssSign: RunSign): Promise<string> {
-		const messageHash = toHexString(
+	async signPersonalMessage(from: string, request: string): Promise<string> {
+		const messageHash = utils.toHexString(
 			hashPersonalMessage(Buffer.from(request.slice(2), 'hex')),
 		);
 		const wallet = this.#getWalletByAddress(from);
 
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'keccak256',
 			request,
 			messageHash,
@@ -395,11 +382,11 @@ export class SimpleKeyring implements Keyring {
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async signMessage(from: string, data: string, runTssSign: RunSign): Promise<string> {
+	async signMessage(from: string, data: string,): Promise<string> {
 		const message = stripHexPrefix(data);
 		const messageHash = keccak256('0x' + message).toString('hex');
 		const wallet = this.#getWalletByAddress(from);
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'keccak256',
 			message,
 			messageHash,
@@ -411,8 +398,8 @@ export class SimpleKeyring implements Keyring {
 	}
 
 	async #saveState(): Promise<void> {
-		let silentShareStorage: StorageData = await getSilentShareStorage();
-		await saveSilentShareStorage({
+		const silentShareStorage: StorageData = await this.#storage.getStorageData();
+		await this.#storage.setStorageData({
 			...silentShareStorage,
 			wallets: this.#wallets,
 			requests: this.#requests,

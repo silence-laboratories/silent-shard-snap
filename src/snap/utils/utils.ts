@@ -6,7 +6,7 @@ import { JsonTx } from '@ethereumjs/tx';
 import type { Json } from '@metamask/utils';
 import { pubToAddress } from 'ethereumjs-util';
 import _sodium from 'libsodium-wrappers';
-import { DistributedKey } from '../types';
+import { DistributedKey } from '../storage/types';
 
 export const fromHexStringToBytes = (hexString: string) => {
 	try {
