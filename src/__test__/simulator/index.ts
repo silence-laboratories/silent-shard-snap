@@ -72,7 +72,6 @@ export class Simulator {
 		try {
 			await this.firebase.removeUser();
 			this.sdk = null;
-			console.log("cleanUpSimulation sim done");
 		} catch (error) {
 			console.error("cleanUpSimulation sim err", error);
 		}
