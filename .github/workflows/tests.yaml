@@ -15,10 +15,15 @@ on:
 jobs:
   test:
     name: E2e tests
-    runs-on: node:20
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    - run: echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
-    - run: echo "APP_ID=${{ secrets.APP_ID }}" >> $GITHUB_ENV
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
     - run: npm ci
     - run: npm test
+    # - run: echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
+    # - run: echo "APP_ID=${{ secrets.APP_ID }}" >> $GITHUB_ENV
+    # - run: npm ci
+    # - run: npm test
