@@ -31,4 +31,5 @@ export enum SnapErrorCode {
 	UnknownMethod = 18,
 	UnknownError = 19,
 	BackupFailed = 20,
+	SnapAlreadyPaired = 21
 }
