@@ -90,6 +90,10 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			const isRePair = (request.params as [{ isRePair: boolean }])[0]
 				.isRePair;
 			if (!isRePair) {
+				const isPairedRes = await sdk.isPaired();
+				if (isPairedRes.isPaired) {
+					throw new SnapError('Snap already paired', SnapErrorCode.SnapAlreadyPaired);
+				}
 				const initPairingRequest = await initPairingConfirmation();
 
 				if (!initPairingRequest) {
