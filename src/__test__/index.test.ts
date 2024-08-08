@@ -140,7 +140,7 @@ describe('test rpc requests to Snap', () => {
 			await backupPromise;
 
 			// Test init rePairing
-			const rePairingQrCode = await snapRepository.initPairing();
+			const rePairingQrCode = await snapRepository.initPairing(true);
 
 			// Test run rePairing
 			await simulator.pairing(rePairingQrCode, true);
@@ -199,7 +199,8 @@ describe('test rpc requests to Snap', () => {
 			}
 
 			// Test init rePairing
-			const rePairingQrCode = await snapRepository.initPairing();
+			simulator.A.changeSimulatorId();
+			const rePairingQrCode = await snapRepository.initPairing(true);
 			// Test run rePairing
 			await simulator.A.pairing(rePairingQrCode, true);
 			await snapRepository.runRePairing(simulator.A.getWalletAddress());

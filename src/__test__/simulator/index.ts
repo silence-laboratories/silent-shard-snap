@@ -3,6 +3,7 @@ import { Firebase } from './firebase';
 import { SimulatorSdk } from './sdk';
 
 export class Simulator {
+	#simulatorId: string = `simulator-${Math.floor(Math.random() * 1000000)}`;
 	sdk: SimulatorSdk | null = null;
 	firebase: Firebase;
 
@@ -25,11 +26,15 @@ export class Simulator {
 		try {
 			await this.firebase.signInFirebase();
 			// Using random UUID for testing only.
-			this.sdk = new SimulatorSdk(`simulator-${Math.floor(Math.random() * 1000000)}`, this.firebase.db);
+			this.sdk = new SimulatorSdk(this.#simulatorId, this.firebase.db);
 		} catch (error) {
 			console.error("signIn sim err", error);
 		}
 	};
+
+	changeSimulatorId = () => {
+		this.#simulatorId = `simulator-${Math.floor(Math.random() * 1000000)}`;
+	}
 
 	pairing = (qrCode: QrCode, isRepair = false) => {
 		try {
