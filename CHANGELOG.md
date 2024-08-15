@@ -4,12 +4,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.10]
+
+### Changed
+- Upstream package version [`43`](https://github.com/silence-laboratories/silent-shard-snap/pull/43)
+- Big refactoring [`45`](https://github.com/silence-laboratories/silent-shard-snap/pull/45)
+
+### Fixed
+- Disable initialize pairing if we've already paired [`48`](https://github.com/silence-laboratories/silent-shard-snap/pull/48)
+
 ## [1.2.9]
+
+### Added
 - New runBackup rpc method to send backup, add address and walletId to backup [`35`](https://github.com/silence-laboratories/silent-shard-snap/pull/35) [`36`](https://github.com/silence-laboratories/silent-shard-snap/pull/36)
+
+### Changed
 - Remove load balancer [`37`]
 (https://github.com/silence-laboratories/silent-shard-snap/pull/37)
 
 ## [1.2.8]
+
+### Added
 - Set snap version using update snap RPC method [`#31`](https://github.com/silence-laboratories/silent-shard-snap/pull/31)
 - E2e test [`#28`](https://github.com/silence-laboratories/silent-shard-snap/pull/28)
 - Mm 405 use load balancer endpoints of firebase function for snap [`#29`](https://github.com/silence-laboratories/silent-shard-snap/pull/29)

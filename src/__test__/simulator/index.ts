@@ -25,7 +25,8 @@ export class Simulator {
 	signIn = async () => {
 		try {
 			await this.firebase.signInFirebase();
-			// Using random UUID for testing only.
+			// TODO: Right now, we're using random UUID for testing only. 
+			// In the future, we want to control these IDs. By using anonymous sign-in, then delete the users after the test.
 			this.sdk = new SimulatorSdk(this.#simulatorId, this.firebase.db);
 		} catch (error) {
 			console.error("signIn sim err", error);
