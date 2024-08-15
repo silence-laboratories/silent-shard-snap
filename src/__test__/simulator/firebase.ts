@@ -13,8 +13,8 @@ export class Firebase {
 	constructor() {
 		this.#app = initializeApp({
 			...firebaseConfig,
-			apiKey: "AIzaSyC28osouPPmNfhRWnAltwDT0Wu0IhoUTM4",//process.env.API_KEY!,
-			appId: "1:158872929823:web:f6afd4a0ac868c2b03b72a"//process.env.API_ID!,
+			apiKey: process.env.API_KEY!,
+			appId: process.env.API_ID!,
 		});
 		this.#auth = getAuth(this.#app);
 		this.db = getFirestore(this.#app);
