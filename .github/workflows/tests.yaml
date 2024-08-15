@@ -4,21 +4,24 @@ on:
   push:
     branches:
     - staging
+    - main
+    - CI/CD-fix
   pull_request:
     branches:
     - staging
+    - main
+    - CI/CD-fix
 
 jobs:
   test:
     name: E2e tests
-    runs-on: silent-shard-snap-builder
-    strategy:
-      matrix:
-        node-version: ['18.x']
-
+    runs-on: 	macos-latest
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
     - run: echo "API_KEY=${{ secrets.API_KEY }}" >> $GITHUB_ENV
     - run: echo "APP_ID=${{ secrets.APP_ID }}" >> $GITHUB_ENV
-    - run: npm i
+    - run: npm ci
     - run: npm test

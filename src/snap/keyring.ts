@@ -9,10 +9,7 @@ import {
 	SubmitRequestResponse,
 	emitSnapKeyringEvent,
 } from '@metamask/keyring-api';
-import {
-	stripHexPrefix,
-	hashPersonalMessage,
-} from '@ethereumjs/util';
+import { stripHexPrefix, hashPersonalMessage } from '@ethereumjs/util';
 import type { Json } from '@metamask/utils';
 import { JsonRpcRequest } from '@metamask/snaps-types';
 import {
@@ -26,7 +23,7 @@ import { TransactionFactory } from '@ethereumjs/tx';
 import { RLP } from '@ethereumjs/rlp';
 import keccak256 from 'keccak256';
 import SnapSDK from './sdk';
-import { getAddressFromDistributedKey, isEvmChain, toHexString } from './utils/utils';
+import * as utils from './utils/utils';
 import { SnapError, SnapErrorCode } from './error';
 import { Wallet, IStorage, KeyringState, StorageData, DistributedKey, SignMetadata, } from './types';
 
@@ -66,7 +63,7 @@ export default class AccountManagement implements Keyring {
 		}
 
 		const distributedKey: DistributedKey = newPairingState.distributedKey;
-		const address = getAddressFromDistributedKey(distributedKey);
+		const address = utils.getAddressFromDistributedKey(distributedKey);
 
 		const account: KeyringAccount = {
 			id: newPairingState.accountId,
@@ -120,7 +117,7 @@ export default class AccountManagement implements Keyring {
 	): Promise<string[]> {
 		// The `id` argument is not used because all accounts created by this snap
 		// are expected to be compatible with any EVM chain.2
-		return chains.filter((chain) => isEvmChain(chain));
+		return chains.filter((chain) => utils.isEvmChain(chain));
 	}
 
 	async updateAccount(account: KeyringAccount): Promise<void> {
@@ -233,14 +230,14 @@ export default class AccountManagement implements Keyring {
 		switch (method) {
 			case 'personal_sign': {
 				const [message, from] = params as [string, string];
-				return this.signPersonalMessage(from, message, this.#sdk.runSign);
+				return this.signPersonalMessage(from, message);
 			}
 
 			case 'eth_sendTransaction':
 			case 'eth_signTransaction':
 			case 'sign_transaction': {
 				const [tx] = params as [Json];
-				return await this.signTransaction(tx, this.#sdk.runSign);
+				return await this.signTransaction(tx);
 			}
 
 			case 'eth_signTypedData_v1': {
@@ -249,7 +246,7 @@ export default class AccountManagement implements Keyring {
 					Json,
 					{ version: SignTypedDataVersion },
 				];
-				return this.signTypedData(from, data, opts, method, this.#sdk.runSign);
+				return this.signTypedData(from, data, opts, method);
 			}
 			case 'eth_signTypedData_v3': {
 				const [from, data] = params as [string, Json];
@@ -258,7 +255,6 @@ export default class AccountManagement implements Keyring {
 					data,
 					{ version: SignTypedDataVersion.V3 },
 					method,
-					this.#sdk.runSign
 				);
 			}
 			case 'eth_signTypedData_v4': {
@@ -268,13 +264,12 @@ export default class AccountManagement implements Keyring {
 					data,
 					{ version: SignTypedDataVersion.V4 },
 					method,
-					this.#sdk.runSign
 				);
 			}
 
 			case 'eth_sign': {
 				const [from, data] = params as [string, string];
-				return this.signMessage(from, data, this.#sdk.runSign);
+				return this.signMessage(from, data);
 			}
 
 			default: {
@@ -283,7 +278,7 @@ export default class AccountManagement implements Keyring {
 		}
 	}
 
-	async signTransaction(tx: any, runTssSign: RunSign): Promise<string> {
+	async signTransaction(tx: any): Promise<string> {
 		const { from } = tx;
 		// Patch the transaction to make sure that the `chainId` is a hex string.
 		if (!tx.chainId.startsWith('0x')) {
@@ -308,14 +303,14 @@ export default class AccountManagement implements Keyring {
 		const serializedMessage =
 			tx1.type == 0
 				? Buffer.from(RLP.encode(msg)).toString('hex')
-				: toHexString(msg as Uint8Array);
-		const hashedMsg = toHexString(tx1.getHashedMessageToSign());
+				: utils.toHexString(msg as Uint8Array);
+		const hashedMsg = utils.toHexString(tx1.getHashedMessageToSign());
 		const wallet = this.#getWalletByAddress(from);
 
 		const transactionMetadata: SignMetadata =
 			tx1.type == 0 ? 'legacy_transaction' : 'eth_transaction';
 
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'keccak256',
 			serializedMessage,
 			hashedMsg,
@@ -350,7 +345,7 @@ export default class AccountManagement implements Keyring {
 			version: SignTypedDataVersion.V1,
 		},
 		method: SignMetadata,
-		runTssSign: RunSign
+
 	): Promise<string> {
 		const wallet = this.#getWalletByAddress(from);
 		const messageHash =
@@ -359,7 +354,7 @@ export default class AccountManagement implements Keyring {
 				: TypedDataUtils.eip712Hash(data as any, opts.version).toString(
 					'hex',
 				);
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'none',
 			messageHash,
 			messageHash,
@@ -370,13 +365,13 @@ export default class AccountManagement implements Keyring {
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async signPersonalMessage(from: string, request: string, runTssSign: RunSign): Promise<string> {
-		const messageHash = toHexString(
+	async signPersonalMessage(from: string, request: string): Promise<string> {
+		const messageHash = utils.toHexString(
 			hashPersonalMessage(Buffer.from(request.slice(2), 'hex')),
 		);
 		const wallet = this.#getWalletByAddress(from);
 
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'keccak256',
 			request,
 			messageHash,
@@ -387,11 +382,11 @@ export default class AccountManagement implements Keyring {
 		return '0x' + signature + (recId + 27).toString(16);
 	}
 
-	async signMessage(from: string, data: string, runTssSign: RunSign): Promise<string> {
+	async signMessage(from: string, data: string,): Promise<string> {
 		const message = stripHexPrefix(data);
 		const messageHash = keccak256('0x' + message).toString('hex');
 		const wallet = this.#getWalletByAddress(from);
-		const { signature, recId } = await runTssSign(
+		const { signature, recId } = await this.#sdk.runSign(
 			'keccak256',
 			message,
 			messageHash,

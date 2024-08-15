@@ -17,6 +17,13 @@ window.Buffer = window.Buffer || Buffer;
 
 let keyring: AccountManagement;
 
+/**
+ * @abstract check if the origin has permission to call the method
+ * 
+ * @param origin 
+ * @param method 
+ * @returns boolean
+ */
 const hasPermission = (origin: string, method: string): boolean => {
 	if (process.env.IS_PRODUCTION) {
 		return Boolean(PERMISSIONS.get(origin)?.includes(method));
@@ -27,10 +34,15 @@ const hasPermission = (origin: string, method: string): boolean => {
 	);
 };
 
+/**
+ * Get storage data and initialize the keyring object.
+ * 
+ * @returns AccountManagement
+ */
 const getKeyring = async (): Promise<AccountManagement> => {
 	if (!keyring) {
 		const storage = await Storage.instance();
-		const sdk = await SnapSDK.instance();
+		const sdk = await SnapSDK.instance(storage);
 		try {
 			const keyringState = await storage.getStorageData();
 			keyring = new AccountManagement(keyringState, storage, sdk);
@@ -52,7 +64,7 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 	}
 
 	const storage = await Storage.instance();
-	const sdk = await SnapSDK.instance();
+	const sdk = await SnapSDK.instance(storage);
 
 
 	switch (request.method) {
@@ -78,6 +90,10 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 			const isRePair = (request.params as [{ isRePair: boolean }])[0]
 				.isRePair;
 			if (!isRePair) {
+				const isPairedRes = await sdk.isPaired();
+				if (isPairedRes.isPaired) {
+					throw new SnapError('Snap already paired', SnapErrorCode.SnapAlreadyPaired);
+				}
 				const initPairingRequest = await initPairingConfirmation();
 
 				if (!initPairingRequest) {
@@ -196,20 +212,25 @@ export const onRpcRequest: OnRpcRequestHandler = async ({
 				latestVersion: snapLatestVersion,
 			};
 
+		/**
+		 * tss_setSnapVersion
+		 * @abstract set the current snap version
+		 *
+		 * @returns void
+		 *
+		 */
 		case InternalMethod.TssSetSnapVersion:
 			await sdk.setSnapVersion(SNAP_VERSION);
 			return;
 
-		case InternalMethod.E2eTestGetKeyShare:
+		/**
+		 * @abstract Get the snap storage, only in staging environment for tests
+		 */
+		case InternalMethod.E2eTestGetStorage:
 			if (process.env.IS_PRODUCTION) {
 				return null;
 			}
-			const silentShareStorage = await storage.getStorageData();
-			return {
-				distributedKey:
-					silentShareStorage.newPairingState?.distributedKey,
-				pairingData: silentShareStorage.pairingData,
-			};
+			return await storage.getStorageData();
 		default:
 			throw new SnapError('Unknown method', SnapErrorCode.UnknownMethod);
 	}
